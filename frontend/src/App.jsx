@@ -29,6 +29,8 @@ import UserDashboard from "./pages/UserDashboard";
 import Maintenance from "./MaintenancePage/Maintenance";
 import About from "./pages/About";
 import VerifyEmail from "./pages/VerifyEmail";
+import FullScreenLoader from "./components/FullScreenLoader";
+
 
 function App() {
   const [isMaintenance, setIsMaintenance] = useState(false);
@@ -48,7 +50,8 @@ function App() {
     checkServerStatus();
   }, []);
 
-  if (loading) return null;
+  if (loading) return <FullScreenLoader />;
+  
   if (isMaintenance) return <Maintenance />;
 
   return (
