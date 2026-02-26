@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import cors from "cors";
 import mongoose from "mongoose";
 
-// Routes
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
@@ -18,24 +17,59 @@ dotenv.config();
 
 const app = express();
 
-// ✅ Core Middleware
-app.use(express.json()); // Parse JSON bodies
-app.use(cors()); // Allow frontend requests
+/* =====================================
+   ✅ CORS CONFIGURATION
+===================================== */
 
-// ✅ Database Connection
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://aran-naturals-products.vercel.app",
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // allow requests with no origin (mobile apps, postman)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("CORS not allowed"));
+      }
+    },
+    credentials: true,
+  }),
+);
+
+/* =====================================
+   ✅ MIDDLEWARE
+===================================== */
+
+app.use(express.json());
+
+/* =====================================
+   ✅ DATABASE CONNECTION
+===================================== */
+
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
+  .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => {
-    console.error("DB Connection Error:", err.message);
+    console.error("❌ MongoDB Connection Error:", err.message);
     process.exit(1);
   });
 
+/* =====================================
+   ✅ MAINTENANCE MODE
+===================================== */
 
-  app.use(maintenanceMode);
+app.use(maintenanceMode);
 
-  
-// ✅ Routes
+/* =====================================
+   ✅ ROUTES
+===================================== */
+
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/products", productRoutes);
@@ -45,30 +79,40 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/admin/users", adminUserRoutes);
 app.use("/api/upload", uploadRoutes);
 
-// ✅ Health Check Route
+/* =====================================
+   ✅ HEALTH CHECK
+===================================== */
+
 app.get("/", (req, res) => {
-  res.send("API Running...");
+  res.status(200).send("🚀 API Running...");
 });
 
-// ✅ 404 Handler (Professional)
-app.use((req, res, next) => {
+/* =====================================
+   ✅ 404 HANDLER
+===================================== */
+
+app.use((req, res) => {
   res.status(404).json({ message: "Route Not Found" });
 });
 
-// ✅ Global Error Handler (Professional)
+/* =====================================
+   ✅ GLOBAL ERROR HANDLER
+===================================== */
+
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error("🔥 Error:", err.message);
 
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-
-  res.status(statusCode).json({
-    message: err.message || "Server Error",
+  res.status(500).json({
+    message: err.message || "Internal Server Error",
   });
 });
 
-// ✅ Server Start
+/* =====================================
+   ✅ SERVER START
+===================================== */
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
