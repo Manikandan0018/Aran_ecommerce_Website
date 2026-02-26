@@ -1,5 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
+
+import { Analytics } from "@vercel/analytics/react";
+
 import { useEffect, useState } from "react";
 import API from "./services/api";
 import "react-toastify/dist/ReactToastify.css";
@@ -57,7 +60,7 @@ function App() {
           element={
             <>
               <Navbar />
-                <Home />
+              <Home />
             </>
           }
           path="/"
@@ -135,6 +138,9 @@ function App() {
           <Route path="users" element={<Users />} />
         </Route>
       </Routes>
+
+      <Analytics />
+      
     </>
   );
 }
