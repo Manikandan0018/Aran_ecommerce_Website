@@ -16,15 +16,19 @@ const MAX_OTP_ATTEMPTS = 5;
 const generateOtp = () => crypto.randomInt(100000, 999999).toString();
 
 // ✅ REGISTER (EMAIL + PASSWORD)
+
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    console.log(import.meta.env.VITE_API_URL);
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "All fields required" });
+    }
+
     const lowerEmail = email.toLowerCase();
 
     let user = await User.findOne({ email: lowerEmail });
 
-    // If verified user exists → block
     if (user && user.isVerified) {
       return res.status(400).json({ message: "User already exists" });
     }
@@ -33,7 +37,6 @@ export const registerUser = async (req, res) => {
     const otp = generateOtp();
 
     if (user && !user.isVerified) {
-      // Update existing unverified user
       user.name = name;
       user.password = hashedPassword;
       user.otp = otp;
@@ -42,7 +45,6 @@ export const registerUser = async (req, res) => {
       user.otpAttempts = 0;
       await user.save();
     } else {
-      // Create new user
       user = await User.create({
         name,
         email: lowerEmail,
@@ -55,16 +57,55 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // Send email AFTER DB save
     await sendOtpEmail(lowerEmail, otp);
 
-    return res.status(201).json({
-      message: "OTP sent to email",
+    res.status(201).json({
+      message: "OTP sent successfully",
       email: user.email,
     });
   } catch (error) {
     console.error("Register Error:", error);
-    return res.status(500).json({ message: "Registration failed" });
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* ================= VERIFY OTP ================= */
+export const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(400).json({ message: "User not found" });
+
+    if (user.isVerified)
+      return res.status(400).json({ message: "Already verified" });
+
+    if (!user.otp || user.otpExpiry < Date.now())
+      return res.status(400).json({ message: "OTP expired" });
+
+    if (user.otpAttempts >= MAX_OTP_ATTEMPTS)
+      return res.status(429).json({ message: "Too many attempts" });
+
+    if (user.otp !== otp) {
+      user.otpAttempts += 1;
+      await user.save();
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    user.isVerified = true;
+    user.otp = null;
+    user.otpAttempts = 0;
+    await user.save();
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -122,41 +163,7 @@ export const googleAuth = async (req, res) => {
 };
 
 // ✅ VERIFY OTP
-export const verifyOtp = async (req, res) => {
-  const { email, otp } = req.body;
 
-  const user = await User.findOne({ email });
-
-  if (!user) return res.status(400).json({ message: "User not found" });
-
-  if (user.isVerified)
-    return res.status(400).json({ message: "Already verified" });
-
-  if (user.otpAttempts >= MAX_OTP_ATTEMPTS)
-    return res.status(429).json({ message: "Too many attempts" });
-
-  if (!user.otp || user.otpExpiry < Date.now())
-    return res.status(400).json({ message: "OTP expired" });
-
-  if (user.otp !== otp) {
-    user.otpAttempts += 1;
-    await user.save();
-    return res.status(400).json({ message: "Invalid OTP" });
-  }
-
-  user.isVerified = true;
-  user.otp = null;
-  user.otpAttempts = 0;
-
-  await user.save();
-
-  res.json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    token: generateToken(user._id),
-  });
-};
 
 // ✅ RESEND OTP (WITH COOLDOWN)
 export const resendOtp = async (req, res) => {

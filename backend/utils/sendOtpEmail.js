@@ -13,20 +13,23 @@ const transporter = nodemailer.createTransport({
 
 export const sendOtpEmail = async (email, otp) => {
   try {
-    console.log("📨 Sending OTP to:", email);
-
-    const info = await transporter.sendMail({
+    await transporter.sendMail({
       from: `"Aran Shop" <${process.env.GMAIL_USER}>`,
       to: email,
       subject: "Email Verification Code",
       html: `
-        <h2>Your OTP Code: ${otp}</h2>
-        <p>This code expires in 10 minutes.</p>
+        <div style="font-family: Arial; padding:20px;">
+          <h2>Email Verification</h2>
+          <p>Your OTP Code:</p>
+          <h1 style="letter-spacing:5px;">${otp}</h1>
+          <p>This code expires in 10 minutes.</p>
+        </div>
       `,
     });
 
-  } catch (err) {
-    console.error("❌ Gmail Error:", err);
-    throw new Error("Email sending failed");
+    console.log("✅ OTP Email Sent Successfully");
+  } catch (error) {
+    console.error("❌ Email Error:", error.message);
+    throw error;
   }
 };
