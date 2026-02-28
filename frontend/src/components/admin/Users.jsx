@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import API from "../../services/api";
 import {
   HiOutlineUserCircle,
@@ -6,23 +6,87 @@ import {
   HiOutlineShieldCheck,
 } from "react-icons/hi2";
 
+/* ===============================
+   USER ROW COMPONENT (MEMOIZED)
+================================ */
+const UserRow = memo(({ user, onToggle, onDelete }) => {
+  return (
+    <tr className="hover:bg-[#FAF9F6]/30 transition-colors">
+      <td className="p-8">
+        <div className="flex items-center gap-5">
+          <div className="w-10 h-10 bg-[#3D4035]/5 text-[#3D4035] rounded-full flex items-center justify-center font-serif">
+            {user.name?.charAt(0)}
+          </div>
+          <div>
+            <p
+              className={`font-serif text-lg text-[#3D4035] ${
+                user.isBlocked ? "opacity-40" : ""
+              }`}
+            >
+              {user.name}
+            </p>
+            <p className="text-xs text-[#B0B0A8]">{user.email}</p>
+          </div>
+        </div>
+      </td>
+
+      <td className="p-8">
+        <span
+          className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${
+            user.isBlocked
+              ? "bg-red-50 text-red-600"
+              : "bg-green-50 text-green-700"
+          }`}
+        >
+          {user.isBlocked ? "Blocked" : "Active"}
+        </span>
+      </td>
+
+      <td className="p-8 text-right space-x-3">
+        <button
+          onClick={() => onToggle(user)}
+          className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+            user.isBlocked
+              ? "bg-green-600 text-white hover:bg-green-700"
+              : "bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white"
+          }`}
+        >
+          {user.isBlocked ? "Unblock" : "Block"}
+        </button>
+
+        <button
+          onClick={() => onDelete(user._id)}
+          className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all"
+        >
+          Delete
+        </button>
+      </td>
+    </tr>
+  );
+});
+
 const Users = () => {
   const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const fetchUsers = async () => {
+  /* ===============================
+     FETCH USERS
+  ================================ */
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
+
       const { data } = await API.get("/admin/users", {
         headers: { Authorization: `Bearer ${userInfo.token}` },
       });
 
       const userList = Array.isArray(data) ? data : data?.users || [];
 
-      // ✅ FILTER: Only show users where isAdmin is false
-      const customersOnly = userList.filter((user) => !user.isAdmin);
+      const customersOnly = userList.filter((u) => !u.isAdmin);
+
       setUsers(customersOnly);
     } catch (error) {
       console.error(
@@ -33,45 +97,75 @@ const Users = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const deleteUser = async (id) => {
-    if (!window.confirm("Permanent Action: Delete this customer account?"))
-      return;
-    try {
-      await API.delete(`/admin/users/${id}`, {
-        headers: { Authorization: `Bearer ${userInfo.token}` },
-      });
-      fetchUsers();
-    } catch (error) {
-      alert("Error deleting user.");
-    }
-  };
-
-  const toggleBlockStatus = async (user) => {
-    const action = user.isBlocked ? "unblock" : "block";
-    try {
-      await API.put(
-        `/admin/users/${user._id}/block`,
-        { isBlocked: !user.isBlocked },
-        { headers: { Authorization: `Bearer ${userInfo.token}` } },
-      );
-      fetchUsers();
-    } catch (error) {
-      alert(`Failed to ${action} user.`);
-    }
-  };
+  }, [userInfo.token]);
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase()),
+  /* ===============================
+     OPTIMIZED SEARCH (useMemo)
+  ================================ */
+  const filteredUsers = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+
+    return users.filter(
+      (user) =>
+        user.name?.toLowerCase().includes(term) ||
+        user.email?.toLowerCase().includes(term),
+    );
+  }, [searchTerm, users]);
+
+  /* ===============================
+     OPTIMISTIC DELETE
+  ================================ */
+  const deleteUser = useCallback(
+    async (id) => {
+      if (!window.confirm("Delete this customer account?")) return;
+
+      const originalUsers = users;
+      setUsers((prev) => prev.filter((u) => u._id !== id));
+
+      try {
+        await API.delete(`/admin/users/${id}`, {
+          headers: { Authorization: `Bearer ${userInfo.token}` },
+        });
+      } catch (error) {
+        setUsers(originalUsers); // rollback
+        alert("Delete failed.");
+      }
+    },
+    [users, userInfo.token],
   );
 
+  /* ===============================
+     OPTIMISTIC BLOCK / UNBLOCK
+  ================================ */
+  const toggleBlockStatus = useCallback(
+    async (user) => {
+      const updatedUsers = users.map((u) =>
+        u._id === user._id ? { ...u, isBlocked: !u.isBlocked } : u,
+      );
+
+      setUsers(updatedUsers);
+
+      try {
+        await API.put(
+          `/admin/users/${user._id}/block`,
+          { isBlocked: !user.isBlocked },
+          { headers: { Authorization: `Bearer ${userInfo.token}` } },
+        );
+      } catch (error) {
+        fetchUsers(); // fallback reload
+        alert("Update failed.");
+      }
+    },
+    [users, userInfo.token, fetchUsers],
+  );
+
+  /* ===============================
+     LOADING STATE
+  ================================ */
   if (loading)
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -95,7 +189,6 @@ const Users = () => {
           </p>
         </div>
 
-        {/* SEARCH */}
         <div className="relative">
           <HiOutlineMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0B0A8] text-lg" />
           <input
@@ -117,7 +210,6 @@ const Users = () => {
         </div>
       ) : (
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-[#3D4035]/5 overflow-hidden">
-          {/* DESKTOP TABLE */}
           <table className="w-full text-left hidden md:table">
             <thead>
               <tr className="bg-[#FAF9F6]/50 border-b border-[#3D4035]/5">
@@ -132,101 +224,18 @@ const Users = () => {
                 </th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-gray-50">
               {filteredUsers.map((user) => (
-                <tr
+                <UserRow
                   key={user._id}
-                  className="hover:bg-[#FAF9F6]/30 transition-colors"
-                >
-                  <td className="p-8">
-                    <div className="flex items-center gap-5">
-                      <div className="w-10 h-10 bg-[#3D4035]/5 text-[#3D4035] rounded-full flex items-center justify-center font-serif">
-                        {user.name?.charAt(0)}
-                      </div>
-                      <div>
-                        <p
-                          className={`font-serif text-lg text-[#3D4035] ${user.isBlocked ? "opacity-40" : ""}`}
-                        >
-                          {user.name}
-                        </p>
-                        <p className="text-xs text-[#B0B0A8]">{user.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-8">
-                    <span
-                      className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${
-                        user.isBlocked
-                          ? "bg-red-50 text-red-600"
-                          : "bg-green-50 text-green-700"
-                      }`}
-                    >
-                      {user.isBlocked ? "Blocked" : "Active"}
-                    </span>
-                  </td>
-                  <td className="p-8 text-right space-x-3">
-                    <button
-                      onClick={() => toggleBlockStatus(user)}
-                      className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
-                        user.isBlocked
-                          ? "bg-green-600 text-white hover:bg-green-700"
-                          : "bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white"
-                      }`}
-                    >
-                      {user.isBlocked ? "Unblock" : "Block User"}
-                    </button>
-                    <button
-                      onClick={() => deleteUser(user._id)}
-                      className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
+                  user={user}
+                  onToggle={toggleBlockStatus}
+                  onDelete={deleteUser}
+                />
               ))}
             </tbody>
           </table>
-
-          {/* MOBILE LIST */}
-          <div className="md:hidden divide-y divide-gray-50">
-            {filteredUsers.map((user) => (
-              <div key={user._id} className="p-6 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p
-                      className={`font-serif text-xl text-[#3D4035] ${user.isBlocked ? "opacity-40" : ""}`}
-                    >
-                      {user.name}
-                    </p>
-                    <p className="text-xs text-[#B0B0A8]">{user.email}</p>
-                  </div>
-                  <span
-                    className={`px-2 py-1 rounded-full text-[8px] font-bold uppercase ${user.isBlocked ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"}`}
-                  >
-                    {user.isBlocked ? "Blocked" : "Active"}
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => toggleBlockStatus(user)}
-                    className={`flex-1 py-3 rounded-xl text-[10px] font-bold uppercase ${
-                      user.isBlocked
-                        ? "bg-green-600 text-white"
-                        : "bg-orange-100 text-orange-600"
-                    }`}
-                  >
-                    {user.isBlocked ? "Unblock" : "Block"}
-                  </button>
-                  <button
-                    onClick={() => deleteUser(user._id)}
-                    className="flex-1 py-3 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold uppercase"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       )}
     </div>

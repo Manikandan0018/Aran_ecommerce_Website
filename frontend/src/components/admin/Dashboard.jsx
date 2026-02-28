@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback, memo } from "react";
+
 import {
   HiOutlineUsers,
   HiOutlineCube,
@@ -24,52 +25,22 @@ import API from "../../services/api";
 
 const COLORS = ["#3D4035", "#6B705C", "#A5A58D", "#B7B7A4"];
 
-const Dashboard = () => {
-  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalOrders: 0,
-    totalProducts: 0,
-    totalRevenue: 0,
-    todayOrders: 0,
-    graphData: [],
-    categoryData: [],
-  });
-
-  const [loading, setLoading] = useState(true);
-
-  const fetchStats = async () => {
-    try {
-      const { data } = await API.get("/admin/stats", {
-        headers: { Authorization: `Bearer ${userInfo.token}` },
-      });
-
-      setStats({
-        ...stats,
-        ...data,
-      });
-    } catch (error) {
-      console.error("Stats fetch error", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const StatCard = ({ icon: Icon, label, value, color }) => (
+/* =========================
+   MEMOIZED STAT CARD
+========================= */
+const StatCard = memo(({ icon: Icon, label, value, color }) => {
+  return (
     <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all">
       <div
         className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-5 ${color}`}
       >
         <Icon className="text-2xl" />
       </div>
+
       <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-400 mb-1">
         {label}
       </p>
+
       <p className="text-2xl lg:text-3xl font-serif text-[#3D4035]">
         {label === "Revenue"
           ? `₹${Number(value).toLocaleString()}`
@@ -77,18 +48,61 @@ const Dashboard = () => {
       </p>
     </div>
   );
+});
 
-  if (loading)
+const Dashboard = () => {
+  /* =========================
+     STABLE USER INFO
+  ========================= */
+  const userInfo = useMemo(
+    () => JSON.parse(localStorage.getItem("userInfo")),
+    [],
+  );
+
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  /* =========================
+     FETCH STATS (STABLE)
+  ========================= */
+  const fetchStats = useCallback(async () => {
+    try {
+      const { data } = await API.get("/admin/stats", {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      });
+
+      setStats(data); // fixed
+    } catch (error) {
+      console.error("Stats fetch error", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userInfo]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  /* =========================
+     MEMOIZED DATA
+  ========================= */
+  const graphData = useMemo(() => stats?.graphData || [], [stats]);
+
+  const categoryData = useMemo(() => stats?.categoryData || [], [stats]);
+
+  if (loading || !stats)
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-4 border-[#3D4035] border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-[#3D4035] border-t-transparent rounded-full animate-spin" />
       </div>
     );
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-8">
       {/* HEADER */}
-      <div className="flex flex-col gap-1">
+      <div>
         <p className="text-[10px] uppercase tracking-[0.4em] text-slate-400 font-bold">
           Analytics Overview
         </p>
@@ -97,7 +111,7 @@ const Dashboard = () => {
         </h1>
       </div>
 
-      {/* STATS GRID - Responsive 1 to 5 columns */}
+      {/* STATS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <StatCard
           icon={HiOutlineUsers}
@@ -131,110 +145,50 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* CHARTS SECTION */}
+      {/* CHARTS */}
       <div className="grid lg:grid-cols-3 gap-8">
         {/* REVENUE GRAPH */}
-        <div className="lg:col-span-2 bg-white p-6 lg:p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="font-serif text-xl text-slate-800">
-              Revenue Stream
-            </h3>
-            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full uppercase">
-              Live Data
-            </span>
-          </div>
+        <div className="lg:col-span-2 bg-white p-6 lg:p-10 rounded-[2.5rem] border shadow-sm">
+          <h3 className="font-serif text-xl mb-6">Revenue Stream</h3>
 
-          <div className="h-[300px] lg:h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.graphData || []}>
-                <defs>
-                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3D4035" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#3D4035" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="#F1F5F9"
-                />
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#94A3B8", fontSize: 12 }}
-                  dy={10}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#94A3B8", fontSize: 12 }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "16px",
-                    border: "none",
-                    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
-                  }}
-                />
+          <div className="h-[350px] w-full">
+            <ResponsiveContainer>
+              <AreaChart data={graphData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+
                 <Area
                   type="monotone"
                   dataKey="revenue"
                   stroke="#3D4035"
-                  strokeWidth={4}
-                  fill="url(#colorRev)"
+                  strokeWidth={3}
+                  fillOpacity={0.2}
+                  fill="#3D4035"
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* CATEGORY BREAKDOWN */}
-        <div className="bg-white p-6 lg:p-10 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
-          <h3 className="font-serif text-xl text-slate-800 mb-8">
-            Category Mix
-          </h3>
+        {/* CATEGORY BAR */}
+        <div className="bg-white p-6 lg:p-10 rounded-[2.5rem] border shadow-sm">
+          <h3 className="font-serif text-xl mb-6">Category Mix</h3>
 
-          <div className="flex-1 min-h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.categoryData || []}>
-                <XAxis dataKey="name" hide />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "16px",
-                    border: "none",
-                    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
-                  }}
-                />
-                <Bar dataKey="sales" radius={[12, 12, 12, 12]} barSize={40}>
-                  {(stats.categoryData || []).map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
+          <div className="h-[350px] w-full">
+            <ResponsiveContainer>
+              <BarChart data={categoryData}>
+                <XAxis dataKey="name" />
+                <Tooltip />
+
+                <Bar dataKey="sales" radius={[8, 8, 0, 0]}>
+                  {categoryData.map((entry, index) => (
+                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
-
-          <div className="mt-8 space-y-4">
-            {(stats.categoryData || []).map((item, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: COLORS[i % COLORS.length] }}
-                  />
-                  <span className="text-xs text-slate-500 font-medium">
-                    {item.name}
-                  </span>
-                </div>
-                <span className="text-xs font-bold text-slate-800">
-                  {item.sales}%
-                </span>
-              </div>
-            ))}
           </div>
         </div>
       </div>

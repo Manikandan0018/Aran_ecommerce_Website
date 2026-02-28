@@ -10,7 +10,7 @@ const ImageWithLoader = ({ src, alt, onClick }) => {
     >
       {/* SKELETON */}
       {!loaded && (
-        <div className="absolute inset-0 animate-pulse bg-gray-200 rounded-lg" />
+        <div className="absolute inset-0 animate-pulse bg-gray-300 rounded-lg" />
       )}
 
       <img

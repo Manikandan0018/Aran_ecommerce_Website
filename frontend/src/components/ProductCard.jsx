@@ -5,43 +5,75 @@ import {
   HiOutlineShoppingBag,
   HiStar,
 } from "react-icons/hi2";
-import { useContext, useState } from "react";
+import { useContext, useState, useCallback, useMemo } from "react";
 import { CartContext } from "../context/CartContext";
 import { toast } from "react-toastify";
 import API from "../services/api";
+import React from "react";
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useContext(CartContext);
-  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const wishlistHandler = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!userInfo?.token) return toast.error("Please sign in first");
+  // ✅ Memoize user info (avoid parsing every render)
+  const userInfo = useMemo(() => {
+    return JSON.parse(localStorage.getItem("userInfo"));
+  }, []);
 
-    try {
-      if (isWishlisted) {
-        await API.delete(`/wishlist/${product._id}`, {
-          headers: { Authorization: `Bearer ${userInfo.token}` },
-        });
-      } else {
-        await API.post(
-          `/wishlist/${product._id}`,
-          {},
-          {
-            headers: { Authorization: `Bearer ${userInfo.token}` },
-          },
-        );
+  // ✅ Memoize wishlist handler
+  const wishlistHandler = useCallback(
+    async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (!userInfo?.token) {
+        toast.error("Please sign in first");
+        return;
       }
 
-      setIsWishlisted(!isWishlisted);
-      toast.success(isWishlisted ? "Removed" : "Saved to favorites");
-    } catch (err) {
-      toast.error("Action failed");
-    }
-  };
+      try {
+        if (isWishlisted) {
+          await API.delete(`/wishlist/${product._id}`, {
+            headers: { Authorization: `Bearer ${userInfo.token}` },
+          });
+        } else {
+          await API.post(
+            `/wishlist/${product._id}`,
+            {},
+            {
+              headers: { Authorization: `Bearer ${userInfo.token}` },
+            },
+          );
+        }
+
+        setIsWishlisted((prev) => !prev);
+        toast.success(isWishlisted ? "Removed" : "Saved to favorites");
+      } catch {
+        toast.error("Action failed");
+      }
+    },
+    [isWishlisted, product._id, userInfo],
+  );
+
+  // ✅ Memoize Add to Cart handler
+  const addToCartHandler = useCallback(
+    (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      addToCart(product, 1);
+      toast.success("Added to Bag");
+    },
+    [addToCart, product],
+  );
+
+  // ✅ Memoize Read More toggle
+  const toggleExpand = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsExpanded((prev) => !prev);
+  }, []);
 
   return (
     <div className="group flex flex-col bg-white md:rounded-[2rem] border border-[#3D4035]/10 overflow-hidden transition-all duration-300 hover:shadow-xl h-[400px] md:h-[560px]">
@@ -54,11 +86,11 @@ const ProductCard = ({ product }) => {
           <img
             src={product.images?.[0] || "https://via.placeholder.com/400"}
             alt={product.name}
+            loading="lazy" // ✅ Lazy loading improves performance
             className="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-105"
           />
         </Link>
 
-        {/* Wishlist */}
         <button
           onClick={wishlistHandler}
           className="absolute top-3 right-3 w-8 h-8 md:w-10 md:h-10 bg-white/90 backdrop-blur-sm shadow-sm rounded-full flex items-center justify-center text-[#3D4035] z-20"
@@ -70,7 +102,6 @@ const ProductCard = ({ product }) => {
           )}
         </button>
 
-        {/* Badge */}
         <div className="absolute top-3 left-3">
           <span className="bg-[#3D4035] text-[#F3E5AB] text-[8px] md:text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-widest">
             Homemade
@@ -78,9 +109,8 @@ const ProductCard = ({ product }) => {
         </div>
       </div>
 
-      {/* CONTENT AREA */}
+      {/* CONTENT */}
       <div className="p-4 md:p-6 flex flex-col flex-1 bg-white">
-        {/* Category + Rating */}
         <div className="flex justify-between items-center mb-2">
           <span className="text-[9px] md:text-[10px] text-[#8C8C83] uppercase tracking-widest font-bold">
             {product.category}
@@ -94,14 +124,12 @@ const ProductCard = ({ product }) => {
           </div>
         </div>
 
-        {/* Title */}
         <Link to={`/product/${product._id}`}>
           <h3 className="text-[#3D4035] font-bold text-sm md:text-lg leading-tight mb-2 hover:text-black">
             {product.name}
           </h3>
         </Link>
 
-        {/* DESCRIPTION (No layout shift anymore) */}
         <div className="mb-4 flex flex-col">
           <div
             className={`transition-all duration-300 ${
@@ -118,30 +146,20 @@ const ProductCard = ({ product }) => {
 
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }}
+            onClick={toggleExpand}
             className="text-[#3D4035] text-[9px] md:text-[10px] font-black uppercase tracking-widest mt-2 border-b border-[#3D4035] w-fit"
           >
             {isExpanded ? "Show Less" : "Read More"}
           </button>
         </div>
 
-        {/* PRICE + BUTTON */}
         <div className="mt-auto pt-3 border-t border-gray-50 flex items-center justify-between">
           <span className="text-[#3D4035] font-black text-lg md:text-2xl tracking-tighter">
             ₹{product.price?.toLocaleString()}
           </span>
 
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              addToCart(product, 1);
-              toast.success("Added to Bag");
-            }}
+            onClick={addToCartHandler}
             className="h-10 w-10 md:h-12 md:w-auto md:px-6 bg-[#3D4035] text-white rounded-xl flex items-center justify-center gap-2 hover:bg-black transition-all active:scale-95"
           >
             <HiOutlineShoppingBag className="text-lg" />
@@ -155,4 +173,4 @@ const ProductCard = ({ product }) => {
   );
 };
 
-export default ProductCard;
+export default React.memo(ProductCard);

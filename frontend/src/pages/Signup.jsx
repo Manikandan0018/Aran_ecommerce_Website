@@ -33,7 +33,6 @@ const Signup = () => {
     }
   };
 
-  
   const handleGoogleSuccess = async (res) => {
     try {
       setLoading(true);
@@ -91,7 +90,6 @@ const Signup = () => {
             >
               {loading ? "Processing..." : "Create Account"}
             </button>
-            
           </form>
 
           <div className="my-10 flex items-center gap-4">
