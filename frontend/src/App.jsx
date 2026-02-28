@@ -2,9 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
-
-import { useEffect, useState, lazy, Suspense } from "react";
-import API from "./services/api";
+import { lazy, Suspense } from "react";
 import "react-toastify/dist/ReactToastify.css";
 
 import FullScreenLoader from "./components/FullScreenLoader";
@@ -23,7 +21,6 @@ const Cart = lazy(() => import("./pages/Cart"));
 const Wishlist = lazy(() => import("./pages/Wishlist"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const UserDashboard = lazy(() => import("./pages/UserDashboard"));
-const Maintenance = lazy(() => import("./MaintenancePage/Maintenance"));
 const About = lazy(() => import("./pages/About"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 
@@ -35,30 +32,6 @@ const ProductManager = lazy(() => import("./components/admin/ProductManager"));
 const AdminOrders = lazy(() => import("./components/admin/AdminOrders"));
 
 function App() {
-  const [isMaintenance, setIsMaintenance] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  /* =============================
-     SERVER HEALTH CHECK
-  ============================= */
-  useEffect(() => {
-    const checkServerStatus = async () => {
-      try {
-        await fetch(import.meta.env.VITE_API_URL);
-        setIsMaintenance(false);
-      } catch (error) {
-        setIsMaintenance(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkServerStatus();
-  }, []);
-
-  if (loading) return <FullScreenLoader />;
-  if (isMaintenance) return <Maintenance />;
-
   return (
     <>
       <ToastContainer position="top-right" autoClose={2000} />
