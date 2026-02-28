@@ -25,7 +25,8 @@ const Signup = () => {
       setLoading(true);
       await API.post("/auth/register", formData);
       toast.success("OTP Code Sent");
-      navigate("/verify-email", { state: { email: formData.email } });
+      localStorage.setItem("verifyEmail", formData.email);
+      navigate("/verify-email");
     } catch (error) {
       toast.error(error.response?.data?.message || "Signup failed");
     } finally {

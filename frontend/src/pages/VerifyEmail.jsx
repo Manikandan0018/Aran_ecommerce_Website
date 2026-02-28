@@ -15,20 +15,24 @@ const VerifyEmail = () => {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const email = location.state?.email;
 
-  /* =========================
-     ROUTE PROTECTION
-  ========================= */
+  /* ===================================================
+     ✅ GET EMAIL (STATE OR LOCAL STORAGE)
+  =================================================== */
+  const email = location.state?.email || localStorage.getItem("verifyEmail");
+
+  /* ===================================================
+     ✅ ROUTE PROTECTION
+  =================================================== */
   useEffect(() => {
     if (!email) {
       navigate("/signup", { replace: true });
     }
   }, [email, navigate]);
 
-  /* =========================
-     COUNTDOWN TIMER
-  ========================= */
+  /* ===================================================
+     ✅ COUNTDOWN TIMER
+  =================================================== */
   useEffect(() => {
     if (timer <= 0) return;
 
@@ -39,9 +43,9 @@ const VerifyEmail = () => {
     return () => clearInterval(interval);
   }, [timer]);
 
-  /* =========================
-     VERIFY OTP
-  ========================= */
+  /* ===================================================
+     ✅ VERIFY OTP
+  =================================================== */
   const verifyHandler = useCallback(async () => {
     if (otp.length !== 6) return toast.warning("Enter valid 6-digit OTP");
 
@@ -50,11 +54,17 @@ const VerifyEmail = () => {
     try {
       setIsVerifying(true);
 
-      const { data } = await API.post("/auth/verify-otp", { email, otp });
+      const { data } = await API.post("/auth/verify-otp", {
+        email,
+        otp,
+      });
 
       login(data);
-      toast.success("Signup successful");
 
+      // 🔥 remove stored email after success
+      localStorage.removeItem("verifyEmail");
+
+      toast.success("Signup successful");
       navigate("/", { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.message || "Verification Failed");
@@ -63,18 +73,16 @@ const VerifyEmail = () => {
     }
   }, [otp, email, login, navigate, isVerifying]);
 
-  /* =========================
-     RESEND OTP
-  ========================= */
+  /* ===================================================
+     ✅ RESEND OTP
+  =================================================== */
   const resendHandler = useCallback(async () => {
     if (timer > 0 || isResending) return;
 
     try {
       setIsResending(true);
 
-      await API.post("/auth/resend-otp", {
-        email,
-      });
+      await API.post("/auth/resend-otp", { email });
 
       toast.success("New code sent");
       setTimer(60);
@@ -85,9 +93,9 @@ const VerifyEmail = () => {
     }
   }, [email, timer, isResending]);
 
-  /* =========================
-     UI
-  ========================= */
+  /* ===================================================
+     ✅ UI
+  =================================================== */
   return (
     <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center p-6">
       <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-sm border border-[#3D4035]/5 p-8 md:p-12 space-y-8 text-center">
