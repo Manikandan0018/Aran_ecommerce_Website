@@ -3,9 +3,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import API from "../services/api";
 import { toast } from "react-toastify";
 import { HiOutlineShieldCheck, HiOutlineEnvelope } from "react-icons/hi2";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
+
 
 const VerifyEmail = () => {
   const [otp, setOtp] = useState("");
+  const { login } = useContext(AuthContext);
   const [isResending, setIsResending] = useState(false);
   const [timer, setTimer] = useState(30); // 30-second cooldown for resend
 
@@ -36,8 +40,8 @@ const VerifyEmail = () => {
 
     try {
       const { data } = await API.post("/auth/verify-otp", { email, otp });
-      localStorage.setItem("userInfo", JSON.stringify(data));
-      toast.success("Identity Verified");
+      login(data);
+      toast.success("signup success");
 
       // Redirect to home or dashboard after success
       setTimeout(() => navigate("/"), 1500);

@@ -17,32 +17,55 @@ const generateOtp = () => crypto.randomInt(100000, 999999).toString();
 
 // ✅ REGISTER (EMAIL + PASSWORD)
 export const registerUser = async (req, res) => {
-  const { name, email, password } = req.body;
+  try {
+    const { name, email, password } = req.body;
 
-  const userExists = await User.findOne({ email });
+    const lowerEmail = email.toLowerCase();
 
-  if (userExists)
-    return res.status(400).json({ message: "User already exists" });
+    let user = await User.findOne({ email: lowerEmail });
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const otp = generateOtp();
+    // If verified user exists → block
+    if (user && user.isVerified) {
+      return res.status(400).json({ message: "User already exists" });
+    }
 
-  const user = await User.create({
-    name,
-    email,
-    password: hashedPassword,
-    isVerified: false,
-    otp,
-    otpExpiry: Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000,
-    otpLastSent: Date.now(),
-  });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const otp = generateOtp();
 
-  await sendOtpEmail(email, otp);
+    if (user && !user.isVerified) {
+      // Update existing unverified user
+      user.name = name;
+      user.password = hashedPassword;
+      user.otp = otp;
+      user.otpExpiry = Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000;
+      user.otpLastSent = Date.now();
+      user.otpAttempts = 0;
+      await user.save();
+    } else {
+      // Create new user
+      user = await User.create({
+        name,
+        email: lowerEmail,
+        password: hashedPassword,
+        isVerified: false,
+        otp,
+        otpExpiry: Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000,
+        otpLastSent: Date.now(),
+        otpAttempts: 0,
+      });
+    }
 
-  res.json({
-    message: "OTP sent to email",
-    email: user.email,
-  });
+    // Send email AFTER DB save
+    await sendOtpEmail(lowerEmail, otp);
+
+    return res.status(201).json({
+      message: "OTP sent to email",
+      email: user.email,
+    });
+  } catch (error) {
+    console.error("Register Error:", error);
+    return res.status(500).json({ message: "Registration failed" });
+  }
 };
 
 
@@ -170,7 +193,7 @@ export const resendOtp = async (req, res) => {
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: email.toLowerCase() });
 
   if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
