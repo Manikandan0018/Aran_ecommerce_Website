@@ -16,23 +16,9 @@ const VerifyEmail = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  /* ===================================================
-     ✅ GET EMAIL (STATE OR LOCAL STORAGE)
-  =================================================== */
   const email = location.state?.email || localStorage.getItem("verifyEmail");
 
-  /* ===================================================
-     ✅ ROUTE PROTECTION
-  =================================================== */
-  useEffect(() => {
-    if (!email) {
-      navigate("/signup", { replace: true });
-    }
-  }, [email, navigate]);
-
-  /* ===================================================
-     ✅ COUNTDOWN TIMER
-  =================================================== */
+  // Countdown timer
   useEffect(() => {
     if (timer <= 0) return;
 
@@ -43,10 +29,13 @@ const VerifyEmail = () => {
     return () => clearInterval(interval);
   }, [timer]);
 
-  /* ===================================================
-     ✅ VERIFY OTP
-  =================================================== */
+  // Verify OTP
   const verifyHandler = useCallback(async () => {
+    if (!email) {
+      toast.error("Session expired. Please signup again.");
+      return navigate("/signup");
+    }
+
     if (otp.length !== 6) return toast.warning("Enter valid 6-digit OTP");
 
     if (isVerifying) return;
@@ -61,10 +50,10 @@ const VerifyEmail = () => {
 
       login(data);
 
-      // 🔥 remove stored email after success
       localStorage.removeItem("verifyEmail");
 
       toast.success("Signup successful");
+
       navigate("/", { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.message || "Verification Failed");
@@ -73,10 +62,10 @@ const VerifyEmail = () => {
     }
   }, [otp, email, login, navigate, isVerifying]);
 
-  /* ===================================================
-     ✅ RESEND OTP
-  =================================================== */
+  // Resend OTP
   const resendHandler = useCallback(async () => {
+    if (!email) return;
+
     if (timer > 0 || isResending) return;
 
     try {
@@ -93,9 +82,6 @@ const VerifyEmail = () => {
     }
   }, [email, timer, isResending]);
 
-  /* ===================================================
-     ✅ UI
-  =================================================== */
   return (
     <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center p-6">
       <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-sm border border-[#3D4035]/5 p-8 md:p-12 space-y-8 text-center">
@@ -115,7 +101,6 @@ const VerifyEmail = () => {
           </p>
         </div>
 
-        {/* OTP INPUT */}
         <div className="space-y-4">
           <div className="relative">
             <HiOutlineEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0B0A8]" />
@@ -139,7 +124,6 @@ const VerifyEmail = () => {
           </button>
         </div>
 
-        {/* RESEND SECTION */}
         <div className="pt-4 border-t">
           <p className="text-xs text-[#B0B0A8] mb-2">
             Didn't receive the code?
