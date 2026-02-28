@@ -44,12 +44,10 @@ function App() {
   useEffect(() => {
     const checkServerStatus = async () => {
       try {
-        await API.get("/");
+        await fetch(import.meta.env.VITE_API_URL);
         setIsMaintenance(false);
       } catch (error) {
-        if (error.response?.status === 503) {
-          setIsMaintenance(true);
-        }
+        setIsMaintenance(false);
       } finally {
         setLoading(false);
       }
