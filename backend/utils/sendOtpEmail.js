@@ -4,7 +4,9 @@ dotenv.config();
 import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // must be true for 465
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASS,
@@ -13,7 +15,11 @@ const transporter = nodemailer.createTransport({
 
 export const sendOtpEmail = async (email, otp) => {
   try {
-    await transporter.sendMail({
+    // verify SMTP connection
+    await transporter.verify();
+    console.log("✅ SMTP server ready");
+
+    const info = await transporter.sendMail({
       from: `"Aran Shop" <${process.env.GMAIL_USER}>`,
       to: email,
       subject: "Email Verification Code",
@@ -26,9 +32,9 @@ export const sendOtpEmail = async (email, otp) => {
         </div>
       `,
     });
-    console.log("✅ OTP Email Sent Successfully");
+
+    console.log("✅ OTP Email Sent:", info.messageId);
   } catch (error) {
-    console.error("❌ Email Error:", error.message);
-    throw error;
+    console.error("❌ Email Error:", error);
   }
 };
