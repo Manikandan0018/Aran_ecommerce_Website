@@ -57,7 +57,12 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    await sendOtpEmail(lowerEmail, otp);
+    console.log("Sending OTP to:", lowerEmail);
+    // Send email WITHOUT blocking response
+    sendOtpEmail(lowerEmail, otp).catch((err) =>
+      console.error("Email error:", err),
+    );
+
 
     res.status(201).json({
       message: "OTP sent successfully",
