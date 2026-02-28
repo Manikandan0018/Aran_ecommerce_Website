@@ -2,135 +2,126 @@ import { Routes, Route } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
-import { lazy, Suspense } from "react";
 import "react-toastify/dist/ReactToastify.css";
 
-// import FullScreenLoader from "./components/FullScreenLoader";
 import Navbar from "./components/Navbar";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 
-/* =============================
-   LAZY LOAD PAGES
-============================= */
+/* DIRECT IMPORTS (NO LAZY) */
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Home from "./pages/Home";
+import Product from "./pages/Products";
+import Cart from "./pages/Cart";
+import Wishlist from "./pages/Wishlist";
+import Checkout from "./pages/Checkout";
+import UserDashboard from "./pages/UserDashboard";
+import About from "./pages/About";
+import VerifyEmail from "./pages/VerifyEmail";
 
-const Login = lazy(() => import("./pages/Login"));
-const Signup = lazy(() => import("./pages/Signup"));
-const Home = lazy(() => import("./pages/Home"));
-const Product = lazy(() => import("./pages/Products"));
-const Cart = lazy(() => import("./pages/Cart"));
-const Wishlist = lazy(() => import("./pages/Wishlist"));
-const Checkout = lazy(() => import("./pages/Checkout"));
-const UserDashboard = lazy(() => import("./pages/UserDashboard"));
-const About = lazy(() => import("./pages/About"));
-const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
-
-/* Admin Lazy */
-const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
-const Dashboard = lazy(() => import("./components/admin/Dashboard"));
-const Users = lazy(() => import("./components/admin/Users"));
-const ProductManager = lazy(() => import("./components/admin/ProductManager"));
-const AdminOrders = lazy(() => import("./components/admin/AdminOrders"));
+import AdminLayout from "./components/admin/AdminLayout";
+import Dashboard from "./components/admin/Dashboard";
+import Users from "./components/admin/Users";
+import ProductManager from "./components/admin/ProductManager";
+import AdminOrders from "./components/admin/AdminOrders";
 
 function App() {
   return (
     <>
       <ToastContainer position="top-right" autoClose={2000} />
 
-      {/* Suspense handles lazy loading */}
-      {/* <Suspense fallback={<FullScreenLoader />}> */}
-        <Routes>
-          {/* PUBLIC ROUTES */}
-          <Route
-            path="/"
-            element={
-              <>
-                <Navbar />
-                <Home />
-              </>
-            }
-          />
+      <Routes>
+        {/* PUBLIC ROUTES */}
+        <Route
+          path="/"
+          element={
+            <>
+              <Navbar />
+              <Home />
+            </>
+          }
+        />
 
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
 
-          <Route
-            path="/cart"
-            element={
-              <>
-                <Navbar />
-                <Cart />
-              </>
-            }
-          />
+        <Route
+          path="/cart"
+          element={
+            <>
+              <Navbar />
+              <Cart />
+            </>
+          }
+        />
 
-          <Route
-            path="/wishlist"
-            element={
-              <>
-                <Navbar />
-                <Wishlist />
-              </>
-            }
-          />
+        <Route
+          path="/wishlist"
+          element={
+            <>
+              <Navbar />
+              <Wishlist />
+            </>
+          }
+        />
 
-          <Route
-            path="/about"
-            element={
-              <>
-                <Navbar />
-                <About />
-              </>
-            }
-          />
+        <Route
+          path="/about"
+          element={
+            <>
+              <Navbar />
+              <About />
+            </>
+          }
+        />
 
-          <Route
-            path="/product/:id"
-            element={
-              <>
-                <Navbar />
-                <Product />
-              </>
-            }
-          />
+        <Route
+          path="/product/:id"
+          element={
+            <>
+              <Navbar />
+              <Product />
+            </>
+          }
+        />
 
-          <Route
-            path="/checkout"
-            element={
-              <>
-                <Navbar />
-                <Checkout />
-              </>
-            }
-          />
+        <Route
+          path="/checkout"
+          element={
+            <>
+              <Navbar />
+              <Checkout />
+            </>
+          }
+        />
 
-          <Route
-            path="/UserOrders"
-            element={
-              <>
-                <Navbar />
-                <UserDashboard />
-              </>
-            }
-          />
+        <Route
+          path="/UserOrders"
+          element={
+            <>
+              <Navbar />
+              <UserDashboard />
+            </>
+          }
+        />
 
-          <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
-          {/* ADMIN ROUTES */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedAdminRoute>
-                <AdminLayout />
-              </ProtectedAdminRoute>
-            }
-          >
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="products" element={<ProductManager />} />
-            <Route path="orders" element={<AdminOrders />} />
-            <Route path="users" element={<Users />} />
-          </Route>
-        </Routes>
-      {/* </Suspense> */}
+        {/* ADMIN ROUTES */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedAdminRoute>
+              <AdminLayout />
+            </ProtectedAdminRoute>
+          }
+        >
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="products" element={<ProductManager />} />
+          <Route path="orders" element={<AdminOrders />} />
+          <Route path="users" element={<Users />} />
+        </Route>
+      </Routes>
 
       <Analytics />
       <SpeedInsights />

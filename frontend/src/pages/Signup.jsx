@@ -52,7 +52,11 @@ const Signup = () => {
 
   return (
     <>
-      {loading && <AuthLoader />}
+      {loading && (
+        <div className="fixed inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm z-50">
+          <AuthLoader />
+        </div>
+      )}
 
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-[460px] bg-mauve-100 rounded-[4rem] p-10 lg:p-16 border border-gray-100">
