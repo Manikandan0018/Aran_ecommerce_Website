@@ -87,6 +87,10 @@ app.get("/", (req, res) => {
   res.status(200).send("🚀 API Running...");
 });
 
+app.get("/api", (req, res) => {
+  res.status(200).json({ status: "OK" });
+});
+
 /* =====================================
    ✅ 404 HANDLER
 ===================================== */

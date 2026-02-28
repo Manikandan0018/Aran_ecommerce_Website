@@ -39,7 +39,7 @@ function App() {
   useEffect(() => {
     const checkServerStatus = async () => {
       try {
-        await API.get("/");
+        await API.get(""); 
         setIsMaintenance(false);
       } catch (error) {
         if (error.response?.status === 503) setIsMaintenance(true);

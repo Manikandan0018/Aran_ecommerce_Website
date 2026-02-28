@@ -19,7 +19,7 @@ const generateOtp = () => crypto.randomInt(100000, 999999).toString();
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
+    console.log(import.meta.env.VITE_API_URL);
     const lowerEmail = email.toLowerCase();
 
     let user = await User.findOne({ email: lowerEmail });
