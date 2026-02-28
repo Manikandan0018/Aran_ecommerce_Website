@@ -23,7 +23,7 @@ const Signup = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      await API.post("/auth/register", formData);
+      await API.post("/auth/signup", formData);
       toast.success("OTP Code Sent");
       navigate("/verify-email", { state: { email: formData.email } });
     } catch (error) {
