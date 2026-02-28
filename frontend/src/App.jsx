@@ -130,7 +130,7 @@ function App() {
             <Route path="users" element={<Users />} />
           </Route>
         </Routes>
-      </Suspense>
+      {/* </Suspense> */}
 
       <Analytics />
       <SpeedInsights />
