@@ -5,7 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { lazy, Suspense } from "react";
 import "react-toastify/dist/ReactToastify.css";
 
-import FullScreenLoader from "./components/FullScreenLoader";
+// import FullScreenLoader from "./components/FullScreenLoader";
 import Navbar from "./components/Navbar";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 
