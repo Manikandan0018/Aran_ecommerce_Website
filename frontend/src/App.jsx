@@ -37,7 +37,7 @@ function App() {
       <ToastContainer position="top-right" autoClose={2000} />
 
       {/* Suspense handles lazy loading */}
-      <Suspense fallback={<FullScreenLoader />}>
+      {/* <Suspense fallback={<FullScreenLoader />}> */}
         <Routes>
           {/* PUBLIC ROUTES */}
           <Route
