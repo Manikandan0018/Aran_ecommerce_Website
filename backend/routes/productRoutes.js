@@ -1,3 +1,4 @@
+/* productRoutes.js */
 import express from "express";
 import {
   getProducts,
@@ -8,11 +9,11 @@ import {
 
 const router = express.Router();
 
-/* ⭐ STATIC ROUTES FIRST */
+// 1. Static routes (Must come first!)
 router.get("/", getProducts);
-router.get("/categories", getProductCategories);
+router.get("/categories", getProductCategories); // Fixed: Higher priority
 
-/* ⭐ DYNAMIC ROUTES AFTER */
+// 2. Dynamic routes (Must come last!)
 router.get("/:id", getProductById);
 router.get("/:id/related", getRelatedProducts);
 

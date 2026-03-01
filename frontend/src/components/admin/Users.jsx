@@ -7,7 +7,7 @@ import {
 } from "react-icons/hi2";
 
 /* ===============================
-   USER ROW COMPONENT (MEMOIZED)
+   USER ROW (DESKTOP TABLE)
 ================================ */
 const UserRow = memo(({ user, onToggle, onDelete }) => {
   return (
@@ -65,8 +65,19 @@ const UserRow = memo(({ user, onToggle, onDelete }) => {
   );
 });
 
+/* ===============================
+   MAIN COMPONENT
+================================ */
 const Users = () => {
-  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+  // ✅ Safe token parsing
+  const userInfo = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("userInfo");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  }, []);
 
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -76,6 +87,8 @@ const Users = () => {
      FETCH USERS
   ================================ */
   const fetchUsers = useCallback(async () => {
+    if (!userInfo?.token) return;
+
     try {
       setLoading(true);
 
@@ -97,14 +110,14 @@ const Users = () => {
     } finally {
       setLoading(false);
     }
-  }, [userInfo.token]);
+  }, [userInfo]);
 
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
 
   /* ===============================
-     OPTIMIZED SEARCH (useMemo)
+     SEARCH FILTER
   ================================ */
   const filteredUsers = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -117,7 +130,7 @@ const Users = () => {
   }, [searchTerm, users]);
 
   /* ===============================
-     OPTIMISTIC DELETE
+     DELETE USER
   ================================ */
   const deleteUser = useCallback(
     async (id) => {
@@ -130,16 +143,16 @@ const Users = () => {
         await API.delete(`/admin/users/${id}`, {
           headers: { Authorization: `Bearer ${userInfo.token}` },
         });
-      } catch (error) {
-        setUsers(originalUsers); // rollback
+      } catch {
+        setUsers(originalUsers);
         alert("Delete failed.");
       }
     },
-    [users, userInfo.token],
+    [users, userInfo],
   );
 
   /* ===============================
-     OPTIMISTIC BLOCK / UNBLOCK
+     BLOCK / UNBLOCK
   ================================ */
   const toggleBlockStatus = useCallback(
     async (user) => {
@@ -155,21 +168,21 @@ const Users = () => {
           { isBlocked: !user.isBlocked },
           { headers: { Authorization: `Bearer ${userInfo.token}` } },
         );
-      } catch (error) {
-        fetchUsers(); // fallback reload
+      } catch {
+        fetchUsers();
         alert("Update failed.");
       }
     },
-    [users, userInfo.token, fetchUsers],
+    [users, userInfo, fetchUsers],
   );
 
   /* ===============================
-     LOADING STATE
+     LOADING
   ================================ */
   if (loading)
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-5 h-5 border-2 border-[#3D4035]/20 border-t-[#3D4035] rounded-full animate-spin"></div>
+        <div className="w-6 h-6 border-2 border-[#3D4035]/20 border-t-[#3D4035] rounded-full animate-spin"></div>
       </div>
     );
 
@@ -177,14 +190,14 @@ const Users = () => {
     <div className="p-6 lg:p-12 max-w-7xl mx-auto bg-[#FAF9F6] min-h-screen">
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
-        <div className="space-y-1">
+        <div>
           <div className="flex items-center gap-2 text-[#3D4035]">
             <HiOutlineShieldCheck className="text-xl" />
             <h1 className="text-4xl font-serif tracking-tight">
               Customer List
             </h1>
           </div>
-          <p className="text-[10px] uppercase tracking-[0.4em] text-[#B0B0A8] font-bold">
+          <p className="text-[10px] uppercase tracking-[0.4em] text-[#B0B0A8] font-bold mt-2">
             {users.length} Total Customers
           </p>
         </div>
@@ -209,34 +222,86 @@ const Users = () => {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-[#3D4035]/5 overflow-hidden">
-          <table className="w-full text-left hidden md:table">
-            <thead>
-              <tr className="bg-[#FAF9F6]/50 border-b border-[#3D4035]/5">
-                <th className="p-8 text-[10px] uppercase tracking-widest font-bold text-[#B0B0A8]">
-                  Customer
-                </th>
-                <th className="p-8 text-[10px] uppercase tracking-widest font-bold text-[#B0B0A8]">
-                  Status
-                </th>
-                <th className="p-8 text-[10px] uppercase tracking-widest font-bold text-right text-[#B0B0A8]">
-                  Actions
-                </th>
-              </tr>
-            </thead>
+        <>
+          {/* MOBILE VIEW */}
+          <div className="space-y-6 md:hidden">
+            {filteredUsers.map((user) => (
+              <div
+                key={user._id}
+                className="bg-white p-6 rounded-2xl shadow-sm border border-[#3D4035]/5"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-serif text-lg text-[#3D4035]">
+                      {user.name}
+                    </p>
+                    <p className="text-xs text-[#B0B0A8]">{user.email}</p>
+                  </div>
 
-            <tbody className="divide-y divide-gray-50">
-              {filteredUsers.map((user) => (
-                <UserRow
-                  key={user._id}
-                  user={user}
-                  onToggle={toggleBlockStatus}
-                  onDelete={deleteUser}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${
+                      user.isBlocked
+                        ? "bg-red-50 text-red-600"
+                        : "bg-green-50 text-green-700"
+                    }`}
+                  >
+                    {user.isBlocked ? "Blocked" : "Active"}
+                  </span>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={() => toggleBlockStatus(user)}
+                    className={`flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest ${
+                      user.isBlocked
+                        ? "bg-green-600 text-white"
+                        : "bg-orange-100 text-orange-600"
+                    }`}
+                  >
+                    {user.isBlocked ? "Unblock" : "Block"}
+                  </button>
+
+                  <button
+                    onClick={() => deleteUser(user._id)}
+                    className="flex-1 py-3 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* DESKTOP TABLE */}
+          <div className="hidden md:block bg-white rounded-[2.5rem] shadow-sm border border-[#3D4035]/5 overflow-hidden">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-[#FAF9F6]/50 border-b border-[#3D4035]/5">
+                  <th className="p-8 text-[10px] uppercase tracking-widest font-bold text-[#B0B0A8]">
+                    Customer
+                  </th>
+                  <th className="p-8 text-[10px] uppercase tracking-widest font-bold text-[#B0B0A8]">
+                    Status
+                  </th>
+                  <th className="p-8 text-[10px] uppercase tracking-widest font-bold text-right text-[#B0B0A8]">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-gray-50">
+                {filteredUsers.map((user) => (
+                  <UserRow
+                    key={user._id}
+                    user={user}
+                    onToggle={toggleBlockStatus}
+                    onDelete={deleteUser}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

@@ -70,3 +70,17 @@ export const rejectOrder = async (req, res) => {
 
   res.json({ message: "Order rejected" });
 };
+
+/* ADMIN – DELIVER ORDER */
+export const deliverOrder = async (req, res) => {
+  const order = await Order.findById(req.params.id);
+
+  if (!order) {
+    return res.status(404).json({ message: "Order not found" });
+  }
+
+  order.status = "delivered";
+  await order.save();
+
+  res.json({ message: "Order marked as delivered" });
+};

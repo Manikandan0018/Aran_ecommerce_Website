@@ -68,8 +68,10 @@ export const getProductCategories = async (req, res) => {
   try {
     const categories = await Product.distinct("category");
 
-    // Remove empty/null & sort
-    const cleanCategories = categories.filter(Boolean).sort();
+    // 1. Trim whitespace, 2. Filter out nulls, 3. Get Unique values using Set
+    const cleanCategories = [
+      ...new Set(categories.filter(Boolean).map((cat) => cat.trim()))
+    ].sort();
 
     res.json(cleanCategories);
   } catch (error) {

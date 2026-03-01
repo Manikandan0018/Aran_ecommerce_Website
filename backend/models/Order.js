@@ -32,10 +32,9 @@ const orderSchema = new mongoose.Schema(
     phone: { type: String, required: true },
 
     totalAmount: { type: Number, required: true },
-
     status: {
       type: String,
-      enum: ["pending", "confirmed", "rejected"],
+      enum: ["pending", "confirmed", "rejected", "delivered"],
       default: "pending",
     },
   },

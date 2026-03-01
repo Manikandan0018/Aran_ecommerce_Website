@@ -14,20 +14,23 @@ const userSchema = new mongoose.Schema(
 
     isBlocked: { type: Boolean, default: false },
 
-    // ✅ Email Verification Fields
+    // Email Verification
     isVerified: { type: Boolean, default: false },
     otp: { type: String },
     otpExpiry: { type: Date },
     otpAttempts: { type: Number, default: 0 },
     otpLastSent: { type: Date },
 
-    // ✅ Wishlist
-    wishlist: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Product",
-      },
-    ],
+    // ✅ Wishlist (FIXED)
+    wishlist: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true },
 );

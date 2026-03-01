@@ -1,158 +1,165 @@
-import React, {
-  useContext,
-  useState,
-  useRef,
-  useEffect,
-  useMemo,
-  useCallback,
-} from "react";
+import React, { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
 import {
   HiOutlineShoppingBag,
-  HiOutlineHeart,
-  HiOutlineUser,
+  HiMagnifyingGlass,
+  HiChevronDown,
+  HiOutlineHeart, // Added for Wishlist
 } from "react-icons/hi2";
 import { AuthContext } from "../context/AuthContext";
 import { CartContext } from "../context/CartContext";
+
+// IMPORT YOUR LOGOS HERE
+import mainLogo from "../image/logo.jpeg";
+import adminIcon from "../image/admin-logo.png";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout } = useContext(AuthContext);
   const { cartItems } = useContext(CartContext);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
+  const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
-  /* =========================
-     MEMOIZED VALUES
-  ========================= */
-
-  const cartCount = useMemo(() => {
-    return cartItems.length;
-  }, [cartItems]);
-
-  /* =========================
-     HANDLERS
-  ========================= */
-
-  const toggleMenu = useCallback(() => {
-    setMenuOpen((prev) => !prev);
-  }, []);
-
-  const closeMenu = useCallback(() => {
-    setMenuOpen(false);
-  }, []);
-
-  const logoutHandler = useCallback(() => {
-    logout();
-    toast.success("See you again soon");
-    navigate("/login");
-  }, [logout, navigate]);
-
-  /* =========================
-     CLOSE ON OUTSIDE CLICK
-  ========================= */
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  /* =========================
-     UI
-  ========================= */
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/?search=${searchQuery}`);
+    }
+  };
 
   return (
-    <nav className="bg-[#E9EFDE]/80 backdrop-blur-xl sticky top-0 z-[100] border-b border-[#2C3026]/5">
-      <div className="max-w-7xl mx-auto px-6 lg:px-10">
-        <div className="flex items-center justify-between h-20">
-          {/* Logo */}
-          <Link to="/" className="flex flex-col">
-            <span className="text-2xl font-bold tracking-[0.2em] text-[#2C3026]">
-              ARAN
-            </span>
-            <span className="text-[10px] uppercase tracking-[0.4em] text-[#2C3026]/60">
-              Natural
-            </span>
+    <nav className="bg-[#2874f0] text-white sticky top-0 z-[100] shadow-md">
+      <div className="max-w-[1400px] mx-auto px-4 flex flex-col">
+        <div className="flex items-center h-16 md:h-20 gap-2 md:gap-10">
+          {/* 1. LOGO */}
+          <Link to="/" className="flex items-center gap-2 group min-w-fit">
+            <img
+              src={mainLogo}
+              alt="ARAN Plus"
+              className="h-8 md:h-10 w-auto object-contain rounded-sm"
+            />
+            <div className="flex flex-col leading-none">
+              <span className="text-xl md:text-2xl font-black italic tracking-tighter">
+                AR<span className="text-green-400">AN</span>
+              </span>
+              <span className="text-[10px] text-gray-200 hidden md:block">
+                Explore{" "}
+                <span className="text-yellow-400 font-bold">Nature</span>
+              </span>
+            </div>
           </Link>
 
-          {/* Actions */}
-          <div className="flex items-center gap-6 lg:gap-8">
-            <Link to="/wishlist">
-              <HiOutlineHeart className="text-2xl text-[#2C3026]" />
-            </Link>
+          {/* 2. SEARCH BAR (Desktop) */}
+          <form
+            onSubmit={handleSearch}
+            className="hidden md:flex flex-1 max-w-2xl relative"
+          >
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search for products, brands and more"
+              className="w-full bg-white py-2 px-4 pr-10 rounded-sm text-gray-900 text-sm outline-none shadow-sm focus:shadow-md"
+            />
+            <button
+              type="submit"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#2874f0]"
+            >
+              <HiMagnifyingGlass className="text-xl" />
+            </button>
+          </form>
 
-            <Link to="/cart" className="relative">
-              <HiOutlineShoppingBag className="text-2xl text-[#2C3026]" />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-2 bg-[#2C3026] text-[#E9EFDE] text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                  {cartCount}
-                </span>
-              )}
-            </Link>
+          {/* 3. ACTIONS (User, Wishlist, Cart) */}
+          <div className="flex items-center gap-3 md:gap-8 ml-auto">
+            {/* USER PROFILE */}
+            <div
+              className="relative"
+              onMouseEnter={() => setShowUserMenu(true)}
+              onMouseLeave={() => setShowUserMenu(false)}
+            >
+              {user ? (
+                <div className="flex items-center gap-1 cursor-pointer font-bold text-sm h-16 md:h-20">
+                  <span className="max-w-[80px] truncate">
+                    {user.name.split(" ")[0]}
+                  </span>
+                  <HiChevronDown
+                    className={`transition-transform ${showUserMenu ? "rotate-180" : ""}`}
+                  />
 
-            {user ? (
-              <div className="relative" ref={menuRef}>
-                <button
-                  onClick={toggleMenu}
-                  className="w-10 h-10 rounded-full bg-white/50 border border-[#2C3026]/10 flex items-center justify-center"
-                >
-                  <HiOutlineUser className="text-lg text-[#2C3026]" />
-                </button>
-
-                {menuOpen && (
-                  <div className="absolute right-0 mt-3 w-60 bg-white rounded-2xl shadow-2xl border border-[#2C3026]/5">
-                    <div className="px-5 py-4 bg-[#2C3026]/5 border-b border-[#2C3026]/5">
-                      <p className="text-[10px] uppercase tracking-widest text-[#2C3026]/50 font-bold">
-                        Signed in as
-                      </p>
-                      <p className="text-sm font-bold text-[#2C3026] truncate">
-                        {user.name || user.email}
-                      </p>
-                    </div>
-
-                    <Link
-                      to="/UserOrders"
-                      onClick={closeMenu}
-                      className="block px-5 py-3 text-xs uppercase font-bold"
-                    >
-                      My Orders
-                    </Link>
-
-                    {user.isAdmin && (
+                  {showUserMenu && (
+                    <div className="absolute top-[75%] right-0 w-56 bg-white text-gray-800 shadow-2xl border rounded-sm py-2 z-[110]">
+                      {user.isAdmin && (
+                        <Link
+                          to="/admin/dashboard"
+                          className="flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-blue-50 text-[#2874f0] font-bold border-b transition-colors"
+                        >
+                          <img
+                            src={adminIcon}
+                            alt="Admin"
+                            className="w-6 h-6 object-contain"
+                          />
+                          <span>Admin Panel</span>
+                        </Link>
+                      )}
                       <Link
-                        to="/admin/dashboard"
-                        onClick={closeMenu}
-                        className="block px-5 py-3 text-xs uppercase font-bold text-[#D4AF37]"
+                        to="/UserOrders"
+                        className="block px-4 py-2.5 hover:bg-gray-50 text-sm border-b"
                       >
-                        Admin Dashboard
+                        My Orders
                       </Link>
-                    )}
+                      <Link
+                        to="/wishlist"
+                        className="block md:hidden px-4 py-2.5 hover:bg-gray-50 text-sm border-b"
+                      >
+                        My Wishlist
+                      </Link>
+                      <button
+                        onClick={logout}
+                        className="w-full text-left px-4 py-2.5 hover:bg-red-50 text-red-600 text-sm font-bold"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  className="bg-white text-[#2874f0] px-4 md:px-6 py-1.5 font-bold rounded-sm text-sm"
+                >
+                  Login
+                </Link>
+              )}
+            </div>
 
-                    <button
-                      onClick={logoutHandler}
-                      className="w-full text-left px-5 py-4 text-xs uppercase font-bold text-red-500"
-                    >
-                      Logout
-                    </button>
-                  </div>
+            {/* ⭐ WISHLIST BUTTON ⭐ */}
+            <Link
+              to="/wishlist"
+              className="flex items-center gap-2 relative py-2 group"
+            >
+              <HiOutlineHeart className="text-2xl group-hover:scale-110 transition-transform" />
+              <span className="font-bold text-sm hidden lg:block">
+                Wishlist
+              </span>
+            </Link>
+
+            {/* CART */}
+            <Link
+              to="/cart"
+              className="flex items-center gap-2 relative py-2 group"
+            >
+              <div className="relative">
+                <HiOutlineShoppingBag className="text-2xl group-hover:scale-110 transition-transform" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-yellow-400 text-[#2874f0] text-[10px] font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center border-2 border-[#2874f0]">
+                    {cartCount}
+                  </span>
                 )}
               </div>
-            ) : (
-              <Link
-                to="/login"
-                className="text-[11px] font-black uppercase tracking-[0.2em] border-b-2 border-[#2C3026]"
-              >
-                Sign In
-              </Link>
-            )}
+              <span className="font-bold text-sm hidden lg:block">Cart</span>
+            </Link>
           </div>
         </div>
       </div>
@@ -160,4 +167,4 @@ const Navbar = () => {
   );
 };
 
-export default React.memo(Navbar);
+export default Navbar;

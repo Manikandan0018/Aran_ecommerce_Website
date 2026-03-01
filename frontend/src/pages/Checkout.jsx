@@ -1,11 +1,12 @@
 import React, { useContext, useState, useCallback, useMemo } from "react";
 import { CartContext } from "../context/CartContext";
 import { toast } from "react-toastify";
-import { HiOutlineMapPin, HiOutlineShoppingBag } from "react-icons/hi2";
+import { HiCheckCircle, HiTruck } from "react-icons/hi2";
 import API from "../services/api";
 
 const Checkout = () => {
   const { cartItems } = useContext(CartContext);
+  const [placingOrder, setPlacingOrder] = useState(false);
 
   const [address, setAddress] = useState({
     name: "",
@@ -13,53 +14,34 @@ const Checkout = () => {
     street: "",
     city: "",
     pincode: "",
+    state: "",
   });
 
-  const [placingOrder, setPlacingOrder] = useState(false);
-
-  /* =========================
-     MEMOIZED TOTAL PRICE
-  ========================= */
   const totalPrice = useMemo(() => {
     return cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
   }, [cartItems]);
 
-  /* =========================
-     INPUT HANDLER
-  ========================= */
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
-
-    setAddress((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setAddress((prev) => ({ ...prev, [name]: value }));
   }, []);
 
-  /* =========================
-     PLACE ORDER
-  ========================= */
   const placeOrderHandler = useCallback(async () => {
     if (placingOrder) return;
-
-    if (cartItems.length === 0) return toast.error("Your bag is empty");
-
+    if (cartItems.length === 0) return toast.error("Your cart is empty");
     if (
       !address.name ||
       !address.phone ||
-      !address.street ||
-      !address.city ||
-      !address.pincode
+      !address.pincode ||
+      !address.street
     ) {
-      return toast.error("Please provide complete delivery details");
+      return toast.error("Please fill the address fields");
     }
 
     try {
       setPlacingOrder(true);
-
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-
-      if (!userInfo?.token) return toast.error("Login required");
+      if (!userInfo?.token) return toast.error("Please login to continue");
 
       const orderPayload = {
         orderItems: cartItems.map((item) => ({
@@ -80,147 +62,161 @@ const Checkout = () => {
       };
 
       const { data: createdOrder } = await API.post("/orders", orderPayload, {
-        headers: {
-          Authorization: `Bearer ${userInfo.token}`,
-        },
+        headers: { Authorization: `Bearer ${userInfo.token}` },
       });
 
-      /* ===== FORMAT WHATSAPP MESSAGE ===== */
+      // WhatsApp Formatting
       const orderDetails = cartItems
         .map(
-          (item, index) =>
-            `--------------------------\n` +
-            `${index + 1}. ${item.name}\n` +
-            `Qty: ${item.qty} | ₹${item.price}\n` +
-            `Subtotal: ₹${item.price * item.qty}\n`,
+          (item, i) =>
+            `${i + 1}. ${item.name} (x${item.qty}) - ₹${item.price * item.qty}`,
         )
         .join("\n");
 
-      const message = `
-NEW ORDER RECEIVED
---------------------------
-Order ID: ${createdOrder._id}
-Date: ${new Date().toLocaleString()}
+      const message = `🛍️ *NEW ORDER: #${createdOrder._id.slice(-6)}*\n\n*Customer:* ${address.name}\n*Phone:* ${address.phone}\n\n*Address:*\n${address.street}, ${address.city} - ${address.pincode}\n\n*Items:*\n${orderDetails}\n\n*Total Amount: ₹${totalPrice}*\n\n_Sent from Website_`;
 
-CUSTOMER DETAILS
-Name: ${address.name}
-Phone: ${address.phone}
-
-DELIVERY ADDRESS
-${address.street}
-${address.city} - ${address.pincode}
-India
-
-ORDER ITEMS
-${orderDetails}
---------------------------
-TOTAL BILL: ₹${totalPrice.toFixed(2)}
---------------------------
-Status: Pending Confirmation
-Admin Panel: ${window.location.origin}/admin/orders
-`;
-
-      const whatsappURL = `https://wa.me/917826920882?text=${encodeURIComponent(
-        message,
-      )}`;
-
-      window.open(whatsappURL, "_blank");
-
-      toast.success("Order request sent via WhatsApp");
+      window.open(
+        `https://wa.me/917826920882?text=${encodeURIComponent(message)}`,
+        "_blank",
+      );
+      toast.success("Order request sent!");
     } catch (error) {
-      console.error(error);
-      toast.error("Order failed");
+      toast.error(error.response?.data?.message || "Order failed");
     } finally {
       setPlacingOrder(false);
     }
   }, [cartItems, address, totalPrice, placingOrder]);
 
-  /* =========================
-     UI
-  ========================= */
   return (
-    <div className="bg-[#FAF9F6] min-h-screen py-16 px-4">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-12 text-center">
-          <h1 className="text-4xl font-serif text-[#3D4035] mb-3">
-            Finalize Your Order
-          </h1>
-        </div>
+    <div className="bg-[#f1f3f6] min-h-screen pb-10">
+     
 
-        <div className="grid lg:grid-cols-5 gap-10">
-          {/* LEFT: ADDRESS FORM */}
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border">
-              <div className="flex items-center gap-3 mb-8">
-                <HiOutlineMapPin />
-                <h2>Delivery Information</h2>
-              </div>
+      <div className="max-w-[1200px] mx-auto sm:px-4 flex flex-col lg:flex-row gap-4">
+        <div className="lg:w-[68%] space-y-4">
+         
 
+          {/* STEP 2: DELIVERY ADDRESS */}
+          <div className="bg-white shadow-sm rounded-sm overflow-hidden">
+            <div className="bg-[#458afa] p-4 text-white flex gap-4">
+          
+              <p className="font-bold uppercase text-sm">Delivery Address</p>
+            </div>
+
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
+                required
                 name="name"
-                placeholder="Recipient Name"
+                value={address.name}
                 onChange={handleChange}
-                className="w-full mb-4 p-4 rounded-xl"
+                placeholder="Name"
+                className="border p-3 rounded-sm text-sm focus:border-[#2874f0] outline-none"
               />
-
               <input
+                required
                 name="phone"
-                placeholder="Phone"
+                value={address.phone}
                 onChange={handleChange}
-                className="w-full mb-4 p-4 rounded-xl"
+                placeholder="10-digit mobile number"
+                className="border p-3 rounded-sm text-sm focus:border-[#2874f0] outline-none"
               />
-
               <input
-                name="street"
-                placeholder="Street"
+                required
+                name="pincode"
+                value={address.pincode}
                 onChange={handleChange}
-                className="w-full mb-4 p-4 rounded-xl"
+                placeholder="Pincode"
+                className="border p-3 rounded-sm text-sm focus:border-[#2874f0] outline-none"
               />
-
               <input
                 name="city"
-                placeholder="City"
+                required
+                value={address.city}
                 onChange={handleChange}
-                className="w-full mb-4 p-4 rounded-xl"
+                placeholder="City/District/Town"
+                className="border p-3 rounded-sm text-sm focus:border-[#2874f0] outline-none"
               />
-
-              <input
-                name="pincode"
-                placeholder="Pincode"
+              <textarea
+                name="street"
+                required
+                value={address.street}
                 onChange={handleChange}
-                className="w-full p-4 rounded-xl"
+                placeholder="Address (Area and Street)"
+                className="border p-3 rounded-sm text-sm focus:border-[#2874f0] outline-none md:col-span-2 h-24"
               />
+            
             </div>
           </div>
 
-          {/* RIGHT: SUMMARY */}
-          <div className="lg:col-span-2">
-            <div className="bg-[#3D4035] rounded-[2.5rem] p-8 text-white sticky top-28">
-              <h2 className="mb-6">Bag Summary</h2>
+          {/* STEP 3: ORDER SUMMARY */}
+          <div className="bg-white shadow-sm rounded-sm">
+            <div className="p-4 border-b flex gap-4">
+              <span className="bg-gray-100 text-[#2874f0] font-bold px-2 py-0.5 rounded-sm text-sm">
+                1
+              </span>
+              <p className="font-bold uppercase text-sm text-gray-500">
+                Order Summary
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 border-b">
+              {cartItems.map((item) => (
+                <div
+                  key={item._id}
+                  className="flex justify-between items-center mb-2"
+                >
+                  <p className="text-sm font-medium">
+                    {item.name}{" "}
+                    <span className="text-gray-400">x {item.qty}</span>
+                  </p>
+                  <p className="text-sm font-bold">₹{item.price * item.qty}</p>
+                </div>
+              ))}
+            </div>
+          </div>
 
-              <div className="space-y-3">
-                {cartItems.map((item) => (
-                  <div key={item._id} className="flex justify-between">
-                    <span>
-                      {item.name} x {item.qty}
-                    </span>
-                    <span>₹{item.price * item.qty}</span>
-                  </div>
-                ))}
+          {/* STEP 4: PAYMENT (STARK ACTION) */}
+          <div className="bg-white shadow-sm rounded-sm">
+            <div className="p-4 flex gap-4 bg-gray-50">
+              <span className="bg-gray-100 text-[#2874f0] font-bold px-2 py-0.5 rounded-sm text-sm">
+                2
+              </span>
+              <p className="font-bold uppercase text-sm text-gray-500">
+                Payment Options
+              </p>
+            </div>
+            <div className="p-6 flex flex-col items-center">
+              <div className="flex items-center gap-2 mb-6 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-bold">
+                <HiTruck /> Complete order via WhatsApp for Cash on Delivery
               </div>
-
-              <div className="mt-8 border-t pt-6 flex justify-between">
-                <span>Total</span>
-                <span>₹{totalPrice.toFixed(2)}</span>
-              </div>
-
               <button
                 onClick={placeOrderHandler}
                 disabled={placingOrder}
-                className="mt-8 w-full bg-white text-black py-4 rounded-xl disabled:opacity-60"
+                className="w-full md:w-80 bg-[#fb641b] text-white py-4 font-bold uppercase text-lg shadow-lg hover:bg-[#e65a16] transition-all disabled:opacity-50"
               >
-                {placingOrder ? "Processing..." : "Place Order via WhatsApp"}
+                {placingOrder ? "Processing..." : "Confirm Order"}
               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: PRICE SIDEBAR */}
+        <div className="lg:w-[32%] h-fit sticky top-20">
+          <div className="bg-white shadow-sm rounded-sm">
+            <h3 className="text-gray-500 font-bold uppercase text-sm p-4 border-b">
+              Price Details
+            </h3>
+            <div className="p-4 space-y-4">
+              <div className="flex justify-between text-base">
+                <span>Price ({cartItems.length} items)</span>
+                <span>₹{totalPrice.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-base">
+                <span>Delivery Charges</span>
+                <span className="text-[#388e3c]">FREE</span>
+              </div>
+              <div className="border-t border-dashed pt-4 flex justify-between text-xl font-bold">
+                <span>Total Amount</span>
+                <span>₹{totalPrice.toLocaleString()}</span>
+              </div>
             </div>
           </div>
         </div>

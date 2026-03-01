@@ -98,6 +98,34 @@ const AdminOrders = () => {
     [userInfo],
   );
 
+
+ const markDelivered = async (id) => {
+   try {
+     setProcessingId(id);
+
+     await API.put(
+       `/orders/${id}/delivered`,
+       {},
+       {
+         headers: {
+           Authorization: `Bearer ${userInfo.token}`,
+         },
+       },
+     );
+
+     // Update UI instantly (no refetch needed)
+     setOrders((prev) =>
+       prev.map((order) =>
+         order._id === id ? { ...order, status: "delivered" } : order,
+       ),
+     );
+   } catch (error) {
+     console.error(error.response?.data || error.message);
+   } finally {
+     setProcessingId(null);
+   }
+ };
+
   /* =========================
      LOADING STATE
   ========================= */
@@ -168,26 +196,37 @@ const AdminOrders = () => {
                 <p className="text-sm text-gray-500">
                   ₹{order.totalAmount.toLocaleString()}
                 </p>
+                <div className="flex gap-4 mt-6">
+                  {order.status === "pending" && (
+                    <>
+                      <button
+                        disabled={processingId === order._id}
+                        onClick={() => updateStatus(order._id, "confirmed")}
+                        className="px-6 py-3 bg-black text-white rounded-xl disabled:opacity-50"
+                      >
+                        Confirm
+                      </button>
 
-                {order.status === "pending" && (
-                  <div className="flex gap-4 mt-6">
+                      <button
+                        disabled={processingId === order._id}
+                        onClick={() => updateStatus(order._id, "rejected")}
+                        className="px-6 py-3 border border-red-400 text-red-400 rounded-xl"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+
+                  {order.status === "confirmed" && (
                     <button
                       disabled={processingId === order._id}
-                      onClick={() => updateStatus(order._id, "confirmed")}
-                      className="px-6 py-3 bg-black text-white rounded-xl disabled:opacity-50"
+                      onClick={() => markDelivered(order._id)}
+                      className="px-6 py-3 bg-green-600 text-white rounded-xl disabled:opacity-50"
                     >
-                      Confirm
+                      Mark Delivered
                     </button>
-
-                    <button
-                      disabled={processingId === order._id}
-                      onClick={() => updateStatus(order._id, "rejected")}
-                      className="px-6 py-3 border border-red-400 text-red-400 rounded-xl"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           ))}
