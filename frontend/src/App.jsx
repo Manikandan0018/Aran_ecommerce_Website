@@ -7,7 +7,6 @@ import "react-toastify/dist/ReactToastify.css";
 import Navbar from "./components/Navbar";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 
-/* DIRECT IMPORTS (NO LAZY) */
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Home from "./pages/Home";
@@ -17,11 +16,8 @@ import Wishlist from "./pages/Wishlist";
 import Checkout from "./pages/Checkout";
 import UserDashboard from "./pages/UserDashboard";
 import About from "./pages/About";
-import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-
-
 
 import AdminLayout from "./components/admin/AdminLayout";
 import Dashboard from "./components/admin/Dashboard";
@@ -48,6 +44,10 @@ function App() {
 
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+
+        {/* ✅ MOVE THESE HERE */}
+        <Route path="/forgot" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
 
         <Route
           path="/cart"
@@ -109,8 +109,6 @@ function App() {
           }
         />
 
-        <Route path="/verify-email" element={<VerifyEmail />} />
-
         {/* ADMIN ROUTES */}
         <Route
           path="/admin"
@@ -124,10 +122,6 @@ function App() {
           <Route path="products" element={<ProductManager />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="users" element={<Users />} />
-
-          <Route path="/forgot" element={<ForgotPassword />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
-          
         </Route>
       </Routes>
 
