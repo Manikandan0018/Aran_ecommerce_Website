@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import React, { useState, useContext, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import API from "../services/api";
@@ -21,10 +21,12 @@ const Signup = () => {
 
   const submitHandler = async (e) => {
     e.preventDefault();
+    if (loading) return;
+
     try {
       setLoading(true);
       await API.post("/auth/register", formData);
-      toast.success("OTP Code Sent");
+      toast.success("Verification Code Sent");
       localStorage.setItem("verifyEmail", formData.email);
       navigate("/verify-email");
     } catch (error) {
@@ -41,7 +43,7 @@ const Signup = () => {
         token: res.credential,
       });
       login(data);
-      toast.success("Account created");
+      toast.success("Welcome to Aran");
       navigate("/");
     } catch {
       toast.error("Signup failed");
@@ -52,15 +54,10 @@ const Signup = () => {
 
   return (
     <>
-      {loading && (
-        <div className="fixed inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm z-50">
-          <AuthLoader />
-        </div>
-      )}
-
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-[460px] bg-mauve-100 rounded-[4rem] p-10 lg:p-16 border border-gray-100">
-          <header className="text-center mb-12">
+      {loading && <AuthLoader />}
+      <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center p-6">
+        <div className="w-full max-w-[460px] bg-[#F3F2EE] rounded-[3.5rem] p-10 lg:p-14 border border-[#3D4035]/5 shadow-sm">
+          <header className="text-center mb-10">
             <h2 className="text-4xl font-serif text-[#3D4035] leading-none mb-4">
               Create Identity
             </h2>
@@ -73,25 +70,29 @@ const Signup = () => {
             <input
               name="name"
               placeholder="FULL NAME"
+              required
               onChange={handleChange}
-              className="w-full px-8 py-5 bg-mauve-200 rounded-3xl outline-none text-[11px] tracking-widest font-bold text-gray-600 placeholder:text-gray-400 border border-transparent focus:border-[#3D4035]/10 transition-all"
+              className="w-full px-8 py-5 bg-[#E5E4E0] rounded-3xl outline-none text-[11px] tracking-widest font-bold text-gray-700 placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:ring-[#3D4035]/10 transition-all"
             />
             <input
               name="email"
+              type="email"
               placeholder="EMAIL ADDRESS"
+              required
               onChange={handleChange}
-              className="w-full px-8 py-5 bg-mauve-200 rounded-3xl outline-none text-[11px] tracking-widest font-bold text-gray-600 placeholder:text-gray-400 border border-transparent focus:border-[#3D4035]/10 transition-all"
+              className="w-full px-8 py-5 bg-[#E5E4E0] rounded-3xl outline-none text-[11px] tracking-widest font-bold text-gray-700 placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:ring-[#3D4035]/10 transition-all"
             />
             <input
-              type="password"
               name="password"
+              type="password"
               placeholder="PASSWORD"
+              required
               onChange={handleChange}
-              className="w-full px-8 py-5 bg-mauve-200 rounded-3xl outline-none text-[11px] tracking-widest font-bold text-gray-600 placeholder:text-gray-400 border border-transparent focus:border-[#3D4035]/10 transition-all"
+              className="w-full px-8 py-5 bg-[#E5E4E0] rounded-3xl outline-none text-[11px] tracking-widest font-bold text-gray-700 placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:ring-[#3D4035]/10 transition-all"
             />
             <button
               disabled={loading}
-              className="w-full py-5 bg-[#3D4035] text-white text-[10px] font-black uppercase tracking-[0.6em] rounded-3xl hover:bg-black transition-all mt-4 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full py-5 bg-[#3D4035] text-white text-[10px] font-black uppercase tracking-[0.6em] rounded-3xl hover:bg-black transition-all mt-4 disabled:opacity-60"
             >
               {loading ? "Processing..." : "Create Account"}
             </button>
@@ -99,7 +100,7 @@ const Signup = () => {
 
           <div className="my-10 flex items-center gap-4">
             <div className="h-[1px] bg-gray-200 flex-1"></div>
-            <span className="text-[9px] text-gray-800 font-bold tracking-widest uppercase italic">
+            <span className="text-[9px] text-gray-400 font-bold tracking-widest uppercase italic">
               One-Click
             </span>
             <div className="h-[1px] bg-gray-200 flex-1"></div>
@@ -118,7 +119,7 @@ const Signup = () => {
             Joined before?{" "}
             <Link
               to="/login"
-              className="text-[#3D4035] border-b border-[#3D4035] ml-2"
+              className="text-[#3D4035] border-b border-[#3D4035] ml-2 pb-0.5"
             >
               Sign In
             </Link>
