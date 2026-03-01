@@ -1,53 +1,58 @@
 import Product from "../models/Product.js";
 
-export const addReview = async (req, res) => {
-  const { rating, comment } = req.body;
 
-  const product = await Product.findById(req.params.id);
-
-  if (!product) {
-    return res.status(404).json({ message: "Product not found" });
-  }
-
-  // ✅ Prevent duplicate reviews
-  const alreadyReviewed = product.reviews.find(
-    (r) => r.user.toString() === req.user._id.toString(),
-  );
-
-  if (alreadyReviewed) {
-    return res.status(400).json({ message: "Product already reviewed" });
-  }
-
-  const review = {
-    user: req.user._id,
-    name: req.user.name,
-    rating: Number(rating),
-    comment,
-  };
-
-  product.reviews.push(review);
-
-  // ✅ Update review count
-  product.numReviews = product.reviews.length;
-
-  // ✅ Recalculate average rating
-  product.rating =
-    product.reviews.reduce((acc, item) => item.rating + acc, 0) /
-    product.reviews.length;
-
-  await product.save();
-
-  res.status(201).json({ message: "Review added" });
-};
+// controllers/reviewController.js
 
 export const getProductReviews = async (req, res) => {
-  const product = await Product.findById(req.params.id);
+  try {
+    const { productId } = req.params;
+    const product = await Product.findById(productId);
 
-  if (!product) {
-    return res.status(404).json({ message: "Product not found" });
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Success: Return the embedded reviews array
+    res.status(200).json(product.reviews);
+  } catch (error) {
+    res.status(500).json({ message: "Server error fetching reviews" });
   }
+};
 
-  res.json(product.reviews);
+export const addReview = async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    const product = await Product.findById(req.params.productId);
+
+    if (!product) return res.status(404).json({ message: "Product not found" });
+
+    const alreadyReviewed = product.reviews.find(
+      (r) => r.user.toString() === req.user._id.toString(),
+    );
+
+    if (alreadyReviewed) {
+      return res.status(400).json({ message: "Product already reviewed" });
+    }
+
+    const review = {
+      user: req.user._id,
+      name: req.user.name,
+      rating: Number(rating),
+      comment,
+      createdAt: new Date(),
+    };
+
+    product.reviews.push(review);
+    product.numReviews = product.reviews.length;
+    product.rating =
+      product.reviews.reduce((acc, item) => item.rating + acc, 0) /
+      product.reviews.length;
+
+    await product.save();
+    res.status(201).json({ message: "Review added" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 export const updateReview = async (req, res) => {

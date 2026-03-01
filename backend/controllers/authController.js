@@ -73,31 +73,38 @@ export const loginUser = async (req, res) => {
 };
 
 /* ================= GOOGLE AUTH ================= */
+
+/* ================= GOOGLE AUTH ================= */
 export const googleAuth = async (req, res) => {
   try {
     const { token } = req.body;
 
+    if (!token) {
+      return res.status(400).json({ message: "Token is required" });
+    }
+
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: process.env.GOOGLE_CLIENT_ID, // Ensure this matches VITE_GOOGLE_CLIENT_ID
     });
 
-    const payload = ticket.getPayload();
+    const { name, email, sub: googleId } = ticket.getPayload();
 
-    const { name, email, sub: googleId } = payload;
-
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
+      // Create user WITHOUT password/mobile for Google signups
       user = await User.create({
         name,
-        email,
+        email: email.toLowerCase(),
         googleId,
+        isAdmin: false,
       });
     }
 
-    if (user.isBlocked)
+    if (user.isBlocked) {
       return res.status(403).json({ message: "Account blocked" });
+    }
 
     res.json({
       _id: user._id,
@@ -107,7 +114,9 @@ export const googleAuth = async (req, res) => {
       token: generateToken(user._id),
     });
   } catch (err) {
-    res.status(401).json({ message: "Google authentication failed" });
+    // This will tell you if it's an "audience mismatch" or "token expired"
+    console.error("Google Auth Detail:", err.message); 
+    res.status(401).json({ message: "Google authentication failed", detail: err.message });
   }
 };
 
