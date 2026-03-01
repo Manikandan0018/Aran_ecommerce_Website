@@ -77,12 +77,7 @@ const Login = () => {
                 onChange={handleChange}
                 className="w-full py-2 outline-none text-sm"
               />
-              <Link
-                to="/forgot"
-                className="absolute right-0 top-2 text-[12px] text-[#2874f0] font-medium"
-              >
-                Forgot?
-              </Link>
+             
             </div>
 
             <p className="text-[12px] text-gray-500">

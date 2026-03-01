@@ -16,8 +16,6 @@ import Wishlist from "./pages/Wishlist";
 import Checkout from "./pages/Checkout";
 import UserDashboard from "./pages/UserDashboard";
 import About from "./pages/About";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
 
 import AdminLayout from "./components/admin/AdminLayout";
 import Dashboard from "./components/admin/Dashboard";
@@ -45,10 +43,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 
-        {/* ✅ MOVE THESE HERE */}
-        <Route path="/forgot" element={<ForgotPassword />} />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />
-
+      
         <Route
           path="/cart"
           element={

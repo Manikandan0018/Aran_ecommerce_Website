@@ -15,8 +15,7 @@ const userSchema = new mongoose.Schema(
     isAdmin: { type: Boolean, default: false },
 
     isBlocked: { type: Boolean, default: false },
-    resetPasswordToken: String,
-    resetPasswordExpire: Date,
+    
 
     wishlist: [
       {
