@@ -1,15 +1,15 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useMemo, useCallback, memo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   HiOutlineShoppingBag,
   HiMagnifyingGlass,
   HiChevronDown,
-  HiOutlineHeart, // Added for Wishlist
+  HiOutlineHeart,
 } from "react-icons/hi2";
+
 import { AuthContext } from "../context/AuthContext";
 import { CartContext } from "../context/CartContext";
 
-// IMPORT YOUR LOGOS HERE
 import mainLogo from "../image/logo.jpeg";
 import adminIcon from "../image/admin-logo.png";
 
@@ -17,41 +17,50 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout } = useContext(AuthContext);
   const { cartItems } = useContext(CartContext);
+
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+  // ✅ Memoized cart count
+  const cartCount = useMemo(() => {
+    return cartItems.reduce((acc, item) => acc + item.quantity, 0);
+  }, [cartItems]);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/?search=${searchQuery}`);
-    }
-  };
+  // ✅ Memoized first name
+  const firstName = useMemo(() => {
+    return user?.name?.split(" ")[0] || "";
+  }, [user]);
+
+  // ✅ Stable search handler
+  const handleSearch = useCallback(
+    (e) => {
+      e.preventDefault();
+      if (searchQuery.trim()) {
+        navigate(`/?search=${searchQuery}`);
+      }
+    },
+    [searchQuery, navigate],
+  );
 
   return (
     <nav className="bg-[#2874f0] text-white sticky top-0 z-[100] shadow-md">
       <div className="max-w-[1400px] mx-auto px-4 flex flex-col">
         <div className="flex items-center h-16 md:h-20 gap-2 md:gap-10">
-          {/* 1. LOGO */}
+          {/* LOGO */}
           <Link to="/" className="flex items-center gap-2 group min-w-fit">
             <img
               src={mainLogo}
-              alt="ARAN Plus"
+              alt="ARAN"
               className="h-8 md:h-10 w-auto object-contain rounded-sm"
             />
             <div className="flex flex-col leading-none">
               <span className="text-xl md:text-2xl font-black italic tracking-tighter">
                 AR<span className="text-green-400">AN</span>
               </span>
-              <span className="text-[10px] text-gray-200 hidden md:block">
-                Explore{" "}
-                <span className="text-yellow-400 font-bold">Nature</span>
-              </span>
             </div>
           </Link>
 
-          {/* 2. SEARCH BAR (Desktop) */}
+          {/* SEARCH */}
           <form
             onSubmit={handleSearch}
             className="hidden md:flex flex-1 max-w-2xl relative"
@@ -60,8 +69,8 @@ const Navbar = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for products, brands and more"
-              className="w-full bg-white py-2 px-4 pr-10 rounded-sm text-gray-900 text-sm outline-none shadow-sm focus:shadow-md"
+              placeholder="Search for products..."
+              className="w-full bg-white py-2 px-4 pr-10 rounded-sm text-gray-900 text-sm outline-none"
             />
             <button
               type="submit"
@@ -71,9 +80,9 @@ const Navbar = () => {
             </button>
           </form>
 
-          {/* 3. ACTIONS (User, Wishlist, Cart) */}
+          {/* ACTIONS */}
           <div className="flex items-center gap-3 md:gap-8 ml-auto">
-            {/* USER PROFILE */}
+            {/* USER */}
             <div
               className="relative"
               onMouseEnter={() => setShowUserMenu(true)}
@@ -81,11 +90,11 @@ const Navbar = () => {
             >
               {user ? (
                 <div className="flex items-center gap-1 cursor-pointer font-bold text-sm h-16 md:h-20">
-                  <span className="max-w-[80px] truncate">
-                    {user.name.split(" ")[0]}
-                  </span>
+                  <span className="max-w-[80px] truncate">{firstName}</span>
                   <HiChevronDown
-                    className={`transition-transform ${showUserMenu ? "rotate-180" : ""}`}
+                    className={`transition-transform ${
+                      showUserMenu ? "rotate-180" : ""
+                    }`}
                   />
 
                   {showUserMenu && (
@@ -93,28 +102,24 @@ const Navbar = () => {
                       {user.isAdmin && (
                         <Link
                           to="/admin/dashboard"
-                          className="flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-blue-50 text-[#2874f0] font-bold border-b transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-blue-50 text-[#2874f0] font-bold border-b"
                         >
                           <img
                             src={adminIcon}
                             alt="Admin"
                             className="w-6 h-6 object-contain"
                           />
-                          <span>Admin Panel</span>
+                          Admin Panel
                         </Link>
                       )}
+
                       <Link
                         to="/UserOrders"
                         className="block px-4 py-2.5 hover:bg-gray-50 text-sm border-b"
                       >
                         My Orders
                       </Link>
-                      <Link
-                        to="/wishlist"
-                        className="block md:hidden px-4 py-2.5 hover:bg-gray-50 text-sm border-b"
-                      >
-                        My Wishlist
-                      </Link>
+
                       <button
                         onClick={logout}
                         className="w-full text-left px-4 py-2.5 hover:bg-red-50 text-red-600 text-sm font-bold"
@@ -134,7 +139,7 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* ⭐ WISHLIST BUTTON ⭐ */}
+            {/* WISHLIST */}
             <Link
               to="/wishlist"
               className="flex items-center gap-2 relative py-2 group"
@@ -167,4 +172,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;
+export default memo(Navbar);
