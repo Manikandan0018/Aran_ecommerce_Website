@@ -6,6 +6,8 @@ const userSchema = new mongoose.Schema(
 
     email: { type: String, required: true, unique: true },
 
+    mobile: { type: String, required: true },
+
     password: { type: String },
 
     googleId: { type: String },
@@ -13,24 +15,15 @@ const userSchema = new mongoose.Schema(
     isAdmin: { type: Boolean, default: false },
 
     isBlocked: { type: Boolean, default: false },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
 
-    // Email Verification
-    isVerified: { type: Boolean, default: false },
-    otp: { type: String },
-    otpExpiry: { type: Date },
-    otpAttempts: { type: Number, default: 0 },
-    otpLastSent: { type: Date },
-
-    // ✅ Wishlist (FIXED)
-    wishlist: {
-      type: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Product",
-        },
-      ],
-      default: [],
-    },
+    wishlist: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+      },
+    ],
   },
   { timestamps: true },
 );

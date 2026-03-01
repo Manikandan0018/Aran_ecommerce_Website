@@ -18,6 +18,10 @@ import Checkout from "./pages/Checkout";
 import UserDashboard from "./pages/UserDashboard";
 import About from "./pages/About";
 import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+
+
 
 import AdminLayout from "./components/admin/AdminLayout";
 import Dashboard from "./components/admin/Dashboard";
@@ -120,6 +124,10 @@ function App() {
           <Route path="products" element={<ProductManager />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="users" element={<Users />} />
+
+          <Route path="/forgot" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+          
         </Route>
       </Routes>
 

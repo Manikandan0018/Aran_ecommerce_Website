@@ -1,19 +1,22 @@
-import React, { useState, useContext, useCallback } from "react";
+import React, { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { GoogleLogin } from "@react-oauth/google";
 import API from "../services/api";
 import { toast } from "react-toastify";
 import { AuthContext } from "../context/AuthContext";
 import AuthLoader from "../components/AuthLoader";
+import home from "../image/home.png";
 
 const Signup = () => {
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    mobile: "",
     password: "",
   });
+
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) =>
@@ -21,112 +24,79 @@ const Signup = () => {
 
   const submitHandler = async (e) => {
     e.preventDefault();
-    if (loading) return;
-
     try {
       setLoading(true);
-      await API.post("/auth/register", formData);
-      toast.success("Verification Code Sent");
-      localStorage.setItem("verifyEmail", formData.email);
-      navigate("/verify-email");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Signup failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+      const { data } = await API.post("/auth/register", formData);
 
-  const handleGoogleSuccess = async (res) => {
-    try {
-      setLoading(true);
-      const { data } = await API.post("/auth/google", {
-        token: res.credential,
-      });
       login(data);
-      toast.success("Welcome to Aran");
+      toast.success("Registration Successful");
       navigate("/");
-    } catch {
-      toast.error("Signup failed");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <>
+    <div className="min-h-[80vh] flex items-center justify-center bg-[#f1f3f6] py-10 px-4">
       {loading && <AuthLoader />}
-      <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center p-6">
-        <div className="w-full max-w-[460px] bg-[#F3F2EE] rounded-[3.5rem] p-10 lg:p-14 border border-[#3D4035]/5 shadow-sm">
-          <header className="text-center mb-10">
-            <h2 className="text-4xl font-serif text-[#3D4035] leading-none mb-4">
-              Create Identity
-            </h2>
-            <p className="text-[10px] uppercase tracking-[0.5em] text-[#B0B0A8] font-black">
-              Register with Aran Studio
-            </p>
-          </header>
 
-          <form onSubmit={submitHandler} className="space-y-4">
+      <div className="flex flex-col md:flex-row w-full max-w-[850px] bg-white shadow-lg rounded-sm overflow-hidden">
+        <div className="md:w-2/5 bg-[#2874f0] p-10 text-white flex flex-col">
+          <h2 className="text-3xl font-bold mb-4">Create Account</h2>
+          <img src={home} alt="signup" className="mt-auto" />
+        </div>
+
+        <div className="md:w-3/5 p-10">
+          <form onSubmit={submitHandler} className="space-y-6">
             <input
+              type="text"
               name="name"
-              placeholder="FULL NAME"
               required
+              placeholder="Full Name"
               onChange={handleChange}
-              className="w-full px-8 py-5 bg-[#E5E4E0] rounded-3xl outline-none text-[11px] tracking-widest font-bold text-gray-700 placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:ring-[#3D4035]/10 transition-all"
+              className="w-full py-2 border-b outline-none"
             />
+
             <input
-              name="email"
               type="email"
-              placeholder="EMAIL ADDRESS"
+              name="email"
               required
+              placeholder="Email"
               onChange={handleChange}
-              className="w-full px-8 py-5 bg-[#E5E4E0] rounded-3xl outline-none text-[11px] tracking-widest font-bold text-gray-700 placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:ring-[#3D4035]/10 transition-all"
+              className="w-full py-2 border-b outline-none"
             />
+
             <input
-              name="password"
-              type="password"
-              placeholder="PASSWORD"
+              type="text"
+              name="mobile"
               required
+              placeholder="Mobile Number"
               onChange={handleChange}
-              className="w-full px-8 py-5 bg-[#E5E4E0] rounded-3xl outline-none text-[11px] tracking-widest font-bold text-gray-700 placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:ring-[#3D4035]/10 transition-all"
+              className="w-full py-2 border-b outline-none"
             />
-            <button
-              disabled={loading}
-              className="w-full py-5 bg-[#3D4035] text-white text-[10px] font-black uppercase tracking-[0.6em] rounded-3xl hover:bg-black transition-all mt-4 disabled:opacity-60"
-            >
-              {loading ? "Processing..." : "Create Account"}
+
+            <input
+              type="password"
+              name="password"
+              required
+              placeholder="Password"
+              onChange={handleChange}
+              className="w-full py-2 border-b outline-none"
+            />
+
+            <button className="w-full bg-[#fb641b] text-white py-3 font-bold">
+              Register
             </button>
           </form>
 
-          <div className="my-10 flex items-center gap-4">
-            <div className="h-[1px] bg-gray-200 flex-1"></div>
-            <span className="text-[9px] text-gray-400 font-bold tracking-widest uppercase italic">
-              One-Click
-            </span>
-            <div className="h-[1px] bg-gray-200 flex-1"></div>
-          </div>
-
-          <div className="flex justify-center mb-10">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              shape="pill"
-              theme="outline"
-              text="signup_with"
-            />
-          </div>
-
-          <p className="text-center text-[10px] tracking-widest text-[#B0B0A8] uppercase font-bold">
-            Joined before?{" "}
-            <Link
-              to="/login"
-              className="text-[#3D4035] border-b border-[#3D4035] ml-2 pb-0.5"
-            >
-              Sign In
-            </Link>
-          </p>
+          <Link to="/login" className="block mt-6 text-center text-[#2874f0]">
+            Already have an account? Login
+          </Link>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

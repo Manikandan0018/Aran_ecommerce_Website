@@ -3,8 +3,8 @@ import {
   registerUser,
   loginUser,
   googleAuth,
-  verifyOtp,
-  resendOtp,
+  forgotPassword,
+  resetPassword,
 } from "../controllers/authController.js";
 
 const router = express.Router();
@@ -12,9 +12,7 @@ const router = express.Router();
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/google", googleAuth);
-
-// ✅ NEW ROUTES
-router.post("/verify-otp", verifyOtp);
-router.post("/resend-otp", resendOtp);
+router.post("/forgot-password", forgotPassword);
+router.put("/reset-password/:token", resetPassword);
 
 export default router;
