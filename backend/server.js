@@ -15,6 +15,7 @@ import adminUserRoutes from "./routes/adminUserRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import { maintenanceMode } from "./middleware/maintenanceMiddleware.js";
 
+import addressRoutes from "./routes/addressRoutes.js";
 
 const app = express();
 
@@ -79,8 +80,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/admin/users", adminUserRoutes);
 app.use("/api/upload", uploadRoutes);
-
-
+app.use("/api/users", addressRoutes);
 
 
 /* =====================================

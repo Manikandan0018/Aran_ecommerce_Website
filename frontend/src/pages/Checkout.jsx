@@ -3,11 +3,29 @@ import { CartContext } from "../context/CartContext";
 import { toast } from "react-toastify";
 import { HiCheckCircle, HiTruck } from "react-icons/hi2";
 import API from "../services/api";
+import { useEffect } from "react";
 
 const Checkout = () => {
   const { cartItems } = useContext(CartContext);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  
+  useEffect(() => {
+  const fetchAddresses = async () => {
+    const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+    if (!userInfo?.token) return;
 
+    const { data } = await API.get("/users/addresses", {
+      headers: { Authorization: `Bearer ${userInfo.token}` },
+    });
+
+    setSavedAddresses(data);
+  };
+
+  fetchAddresses();
+  }, []);
+  
   const [address, setAddress] = useState({
     name: "",
     phone: "",
@@ -26,9 +44,12 @@ const Checkout = () => {
     setAddress((prev) => ({ ...prev, [name]: value }));
   }, []);
 
+
   const placeOrderHandler = useCallback(async () => {
     if (placingOrder) return;
+
     if (cartItems.length === 0) return toast.error("Your cart is empty");
+
     if (
       !address.name ||
       !address.phone ||
@@ -38,10 +59,11 @@ const Checkout = () => {
       return toast.error("Please fill the address fields");
     }
 
+    const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+    if (!userInfo?.token) return toast.error("Please login to continue");
+
     try {
       setPlacingOrder(true);
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      if (!userInfo?.token) return toast.error("Please login to continue");
 
       const orderPayload = {
         orderItems: cartItems.map((item) => ({
@@ -61,11 +83,19 @@ const Checkout = () => {
         totalAmount: totalPrice,
       };
 
+      // 🔥 Create Order
       const { data: createdOrder } = await API.post("/orders", orderPayload, {
         headers: { Authorization: `Bearer ${userInfo.token}` },
       });
 
-      // WhatsApp Formatting
+      // 🔥 Save Address ONLY if new
+      if (!selectedAddressId) {
+       await API.post("/users/addresses", address, {
+         headers: { Authorization: `Bearer ${userInfo.token}` },
+       });
+      }
+
+      // 🔥 WhatsApp Formatting
       const orderDetails = cartItems
         .map(
           (item, i) =>
@@ -73,32 +103,48 @@ const Checkout = () => {
         )
         .join("\n");
 
-      const message = `🛍️ *NEW ORDER: #${createdOrder._id.slice(-6)}*\n\n*Customer:* ${address.name}\n*Phone:* ${address.phone}\n\n*Address:*\n${address.street}, ${address.city} - ${address.pincode}\n\n*Items:*\n${orderDetails}\n\n*Total Amount: ₹${totalPrice}*\n\n_Sent from Website_`;
+      const message = `🛍️ *NEW ORDER: #${createdOrder._id.slice(-6)}*
+
+*Customer:* ${address.name}
+*Phone:* ${address.phone}
+
+*Address:*
+${address.street}, ${address.city} - ${address.pincode}
+
+*Items:*
+${orderDetails}
+
+*Total Amount: ₹${totalPrice}*
+
+_Sent from Website_`;
 
       window.open(
         `https://wa.me/917826920882?text=${encodeURIComponent(message)}`,
         "_blank",
       );
+
       toast.success("Order request sent!");
     } catch (error) {
       toast.error(error.response?.data?.message || "Order failed");
     } finally {
       setPlacingOrder(false);
     }
-  }, [cartItems, address, totalPrice, placingOrder]);
+  }, [
+    cartItems,
+    address,
+    totalPrice,
+    placingOrder,
+    selectedAddressId, // ✅ IMPORTANT
+  ]);
+
 
   return (
     <div className="bg-[#f1f3f6] min-h-screen pb-10">
-     
-
       <div className="max-w-[1200px] mx-auto sm:px-4 flex flex-col lg:flex-row gap-4">
         <div className="lg:w-[68%] space-y-4">
-         
-
           {/* STEP 2: DELIVERY ADDRESS */}
           <div className="bg-white shadow-sm rounded-sm overflow-hidden">
             <div className="bg-[#458afa] p-4 text-white flex gap-4">
-          
               <p className="font-bold uppercase text-sm">Delivery Address</p>
             </div>
 
@@ -143,9 +189,59 @@ const Checkout = () => {
                 placeholder="Address (Area and Street)"
                 className="border p-3 rounded-sm text-sm focus:border-[#2874f0] outline-none md:col-span-2 h-24"
               />
-            
             </div>
           </div>
+
+          {savedAddresses.length > 0 && (
+            <div className="bg-white shadow-sm rounded-sm mt-4 p-6">
+              <h3 className="font-bold text-gray-600 mb-4">Saved Addresses</h3>
+
+              {savedAddresses.map((addr) => (
+                <div
+                  key={addr._id}
+                  className={`border p-4 mb-3 rounded cursor-pointer ${
+                    selectedAddressId === addr._id
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200"
+                  }`}
+                  onClick={() => {
+                    setAddress(addr);
+                    setSelectedAddressId(addr._id);
+                  }}
+                >
+                  <p className="font-semibold">{addr.name}</p>
+                  <p className="text-sm text-gray-600">
+                    {addr.street}, {addr.city} - {addr.pincode}
+                  </p>
+                  <p className="text-sm">{addr.phone}</p>
+
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const userInfo = JSON.parse(
+                        localStorage.getItem("userInfo"),
+                      );
+
+                      const { data } = await API.delete(
+                        `/users/addresses/${addr._id}`,
+                        {
+                          headers: {
+                            Authorization: `Bearer ${userInfo.token}`,
+                          },
+                        },
+                      );
+
+                      setSavedAddresses(data);
+                      setSelectedAddressId(null);
+                    }}
+                    className="text-red-500 text-xs mt-2"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* STEP 3: ORDER SUMMARY */}
           <div className="bg-white shadow-sm rounded-sm">
