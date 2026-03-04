@@ -55,7 +55,7 @@ const Navbar = () => {
             />
             <div className="flex flex-col leading-none">
               <span className="text-xl md:text-2xl font-black italic tracking-tighter">
-                AR<span className="text-green-400">AN</span>
+                அர<span className="text-green-600">ன்</span>
               </span>
             </div>
           </Link>
