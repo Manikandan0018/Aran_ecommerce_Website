@@ -108,7 +108,6 @@ useEffect(() => {
         </section>
       )}
 
-      {/* 2. STICKY CATEGORY BAR - Standard Marketplace UI */}
       {/* 2. STICKY CATEGORY BAR */}
       <div className="bg-white shadow-sm border-b sticky top-[64px] md:top-[80px] z-[40]">
         <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center overflow-x-auto gap-3 no-scrollbar">
