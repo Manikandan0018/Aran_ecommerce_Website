@@ -119,7 +119,7 @@ ${orderDetails}
 _Sent from Website_`;
 
       window.open(
-        `https://wa.me/917826920882?text=${encodeURIComponent(message)}`,
+        `https://wa.me/918489717373?text=${encodeURIComponent(message)}`,
         "_blank",
       );
 
