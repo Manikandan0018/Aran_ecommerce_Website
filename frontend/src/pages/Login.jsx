@@ -129,6 +129,10 @@ const Login = () => {
               />
             </div>
           </form>
+          
+          <Link to="/forgot-password" className="text-sm text-blue-500">
+            Forgot Password?
+          </Link>
 
           <Link
             to="/signup"

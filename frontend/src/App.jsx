@@ -22,6 +22,8 @@ import Dashboard from "./components/admin/Dashboard";
 import Users from "./components/admin/Users";
 import ProductManager from "./components/admin/ProductManager";
 import AdminOrders from "./components/admin/AdminOrders";
+import ForgotPassword from "./pages/ForgotPassword";
+
 
 function App() {
   return (
@@ -43,7 +45,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 
-      
+        <Route path="/forgot-password" element={<ForgotPassword/>} />
+
         <Route
           path="/cart"
           element={

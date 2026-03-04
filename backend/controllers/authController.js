@@ -9,26 +9,42 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 /* ================= REGISTER ================= */
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, mobile, password } = req.body;
+    const { name, email, mobile, password, securityQuestion, securityAnswer } =
+      req.body;
 
-    if (!name || !email || !mobile || !password) {
+    if (
+      !name ||
+      !email ||
+      !mobile ||
+      !password ||
+      !securityQuestion ||
+      !securityAnswer
+    ) {
       return res.status(400).json({ message: "All fields required" });
     }
 
     const lowerEmail = email.toLowerCase();
 
     const userExists = await User.findOne({ email: lowerEmail });
+
     if (userExists) {
       return res.status(400).json({ message: "User already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // convert answer lowercase
+    const normalizedAnswer = securityAnswer.toLowerCase();
+
+    const hashedAnswer = await bcrypt.hash(normalizedAnswer, 10);
+
     const user = await User.create({
       name,
       email: lowerEmail,
       mobile,
       password: hashedPassword,
+      securityQuestion,
+      securityAnswer: hashedAnswer,
     });
 
     res.status(201).json({
@@ -42,6 +58,48 @@ export const registerUser = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+};
+
+
+export const getSecurityQuestion = async (req, res) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email: email.toLowerCase() });
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  res.json({
+    question: user.securityQuestion,
+  });
+};
+
+
+export const resetPassword = async (req, res) => {
+  const { email, answer, newPassword } = req.body;
+
+  const user = await User.findOne({ email: email.toLowerCase() });
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  const normalizedAnswer = answer.toLowerCase();
+
+  const isMatch = await bcrypt.compare(normalizedAnswer, user.securityAnswer);
+
+  if (!isMatch) {
+    return res.status(400).json({ message: "Incorrect answer" });
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  user.password = hashedPassword;
+
+  await user.save();
+
+  res.json({ message: "Password reset successful" });
 };
 
 /* ================= LOGIN ================= */

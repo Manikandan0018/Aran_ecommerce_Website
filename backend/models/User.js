@@ -19,10 +19,15 @@ const userSchema = new mongoose.Schema(
     mobile: { type: String },
     password: { type: String },
     googleId: { type: String },
+
+    // NEW
+    securityQuestion: { type: String },
+    securityAnswer: { type: String },
+
     isAdmin: { type: Boolean, default: false },
     isBlocked: { type: Boolean, default: false },
 
-    addresses: [addressSchema], // ✅ NEW
+    addresses: [addressSchema],
 
     wishlist: [
       {
