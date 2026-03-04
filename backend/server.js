@@ -25,7 +25,7 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://aran-naturals-products.vercel.app",
+  "https://aran-angadi.vercel.app",
 ];
 
 app.use(
