@@ -12,6 +12,18 @@ const Cart = () => {
     return cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
   }, [cartItems]);
 
+
+  const weightChangeHandler = useCallback(
+    (id, weight, price) => {
+      const updated = cartItems.map((item) =>
+        item._id === id ? { ...item, weight: weight, price: price } : item,
+      );
+
+      updateCart(updated);
+    },
+    [cartItems, updateCart],
+  );
+
   const qtyChangeHandler = useCallback(
     (id, qty) => {
       const updated = cartItems.map((item) =>
@@ -55,16 +67,16 @@ const Cart = () => {
                 <h1 className="text-lg font-medium">
                   My Cart ({cartItems.length})
                 </h1>
-              
               </div>
 
               <div className="divide-y divide-gray-100">
                 {cartItems.map((item) => (
                   <CartItem
-                    key={item._id}
+                    key={item._id + item.weight}
                     item={item}
                     removeItemHandler={removeFromCart}
                     qtyChangeHandler={qtyChangeHandler}
+                    weightChangeHandler={weightChangeHandler}
                   />
                 ))}
               </div>
@@ -110,9 +122,7 @@ const Cart = () => {
 
             <div className="mt-4 flex items-center gap-3 text-gray-500 text-sm font-bold p-2">
               <HiShieldCheck className="text-2xl" />
-              <span>
-                100% verified Natural Products
-              </span>
+              <span>100% verified Natural Products</span>
             </div>
           </div>
         </div>

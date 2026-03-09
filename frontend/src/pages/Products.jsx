@@ -97,29 +97,7 @@ const Product = () => {
     toast.success("Added to Cart");
   };
 
-  /* =========================
-     WHATSAPP ORDER
-  ========================= */
-  const handleWhatsAppOrder = () => {
-    if (!selectedVariant) {
-      toast.error("Please select a variant");
-      return;
-    }
-
-    const phoneNumber = "917826920882"; // without + or spaces
-
-    const message =
-      `Hello! I want to order:\n\n` +
-      `Product: ${product.name}\n` +
-      `Weight: ${selectedVariant.weight}\n` +
-      `Price: ₹${selectedVariant.price}\n` +
-      `Quantity: ${qty}\n\n` +
-      `Link: ${window.location.href}`;
-
-    const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-
-    window.open(whatsappURL, "_blank");
-  };
+  
 
   return (
     <div className="bg-[#f1f3f6] min-h-screen pb-10">
@@ -143,12 +121,7 @@ const Product = () => {
                 <HiShoppingCart /> ADD TO CART
               </button>
 
-              <button
-                onClick={handleWhatsAppOrder}
-                className="flex-1 bg-[#25D366] text-white h-12 font-bold"
-              >
-                Order WhatsApp
-              </button>
+              
             </div>
           </div>
 
