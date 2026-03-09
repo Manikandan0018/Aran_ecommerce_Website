@@ -5,7 +5,6 @@ import {
   HiOutlinePlus,
   HiOutlinePencilSquare,
   HiOutlineTrash,
-  HiOutlineCloudArrowUp,
   HiOutlineSquares2X2,
 } from "react-icons/hi2";
 
@@ -22,8 +21,10 @@ const ProductCard = memo(({ product, onEdit, onDelete }) => {
           loading="lazy"
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
+
+        {/* STARTING PRICE */}
         <div className="absolute top-3 right-3 px-4 py-1.5 bg-white/95 backdrop-blur-md rounded-full text-xs font-bold text-slate-800 shadow-sm">
-          ₹{product.price}
+          ₹{product.variants?.[0]?.price || 0}
         </div>
       </div>
 
@@ -43,6 +44,7 @@ const ProductCard = memo(({ product, onEdit, onDelete }) => {
               product.countInStock > 0 ? "bg-emerald-400" : "bg-red-400"
             }`}
           />
+
           <span
             className={`text-[10px] font-bold uppercase tracking-tighter ${
               product.countInStock > 0 ? "text-slate-600" : "text-red-400"
@@ -76,13 +78,17 @@ const ProductCard = memo(({ product, onEdit, onDelete }) => {
 });
 
 const ProductManager = () => {
-  /* ===============================
-     MEMOIZED USER INFO
-  ================================ */
   const userInfo = useMemo(
     () => JSON.parse(localStorage.getItem("userInfo")),
     [],
   );
+
+  const defaultVariants = [
+    { weight: "50g", price: "" },
+    { weight: "100g", price: "" },
+    { weight: "500g", price: "" },
+    { weight: "1kg", price: "" },
+  ];
 
   const [products, setProducts] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -91,16 +97,14 @@ const ProductManager = () => {
 
   const [form, setForm] = useState({
     name: "",
-    price: "",
     category: "",
     countInStock: "",
     description: "",
     images: [],
+    variants: defaultVariants,
   });
 
-  /* ===============================
-     FETCH PRODUCTS (ONCE)
-  ================================ */
+  /* FETCH PRODUCTS */
   const fetchProducts = useCallback(async () => {
     try {
       const { data } = await API.get("/products");
@@ -116,17 +120,27 @@ const ProductManager = () => {
     fetchProducts();
   }, [fetchProducts]);
 
-  /* ===============================
-     HANDLERS
-  ================================ */
-  const handleChange = useCallback((e) => {
+  /* INPUT CHANGE */
+  const handleChange = (e) => {
     setForm((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
     }));
-  }, []);
+  };
 
-  const imageUploadHandler = useCallback(async (e) => {
+  /* VARIANT CHANGE */
+  const handleVariantChange = (index, field, value) => {
+    const updated = [...form.variants];
+    updated[index][field] = value;
+
+    setForm({
+      ...form,
+      variants: updated,
+    });
+  };
+
+  /* IMAGE UPLOAD */
+  const imageUploadHandler = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -136,108 +150,116 @@ const ProductManager = () => {
     try {
       setUploading(true);
       const { data } = await API.post("/upload", formData);
+
       setForm((prev) => ({
         ...prev,
         images: [data.imageUrl],
       }));
+
       toast.success("Image uploaded");
     } catch {
       toast.error("Upload failed");
     } finally {
       setUploading(false);
     }
-  }, []);
+  };
 
-  /* ===============================
-     CREATE / UPDATE (OPTIMISTIC)
-  ================================ */
-  const submitHandler = useCallback(
-    async (e) => {
-      e.preventDefault();
+  /* SUBMIT PRODUCT */
+  const submitHandler = async (e) => {
+    e.preventDefault();
 
-      const config = {
-        headers: {
-          Authorization: `Bearer ${userInfo.token}`,
-        },
-      };
+    const config = {
+      headers: {
+        Authorization: `Bearer ${userInfo.token}`,
+      },
+    };
 
-      try {
-        if (editingProduct) {
-          const { data } = await API.put(
-            `/admin/products/${editingProduct}`,
-            form,
-            config,
-          );
+    try {
+      if (editingProduct) {
+        const { data } = await API.put(
+          `/admin/products/${editingProduct}`,
+          form,
+          config,
+        );
 
-          setProducts((prev) =>
-            prev.map((p) => (p._id === editingProduct ? data : p)),
-          );
+        setProducts((prev) =>
+          prev.map((p) => (p._id === editingProduct ? data : p)),
+        );
 
-          toast.success("Product updated");
-        } else {
-          const { data } = await API.post("/admin/products", form, config);
+        toast.success("Product updated");
+      } else {
+        const { data } = await API.post("/admin/products", form, config);
 
-          setProducts((prev) => [data, ...prev]);
-          toast.success("Product added");
-        }
+        setProducts((prev) => [data, ...prev]);
 
-        resetForm();
-      } catch {
-        toast.error("Save failed");
+        toast.success("Product added");
       }
-    },
-    [editingProduct, form, userInfo],
-  );
 
-  const editHandler = useCallback((product) => {
+      resetForm();
+    } catch {
+      toast.error("Save failed");
+    }
+  };
+
+  /* EDIT PRODUCT */
+  const editHandler = (product) => {
     setEditingProduct(product._id);
+
+    const mergedVariants = defaultVariants.map((defaultVar) => {
+      const existing = product.variants?.find(
+        (v) => v.weight === defaultVar.weight,
+      );
+
+      return existing || defaultVar;
+    });
+
     setForm({
       name: product.name,
-      price: product.price,
       category: product.category,
       countInStock: product.countInStock,
       description: product.description,
       images: product.images || [],
+      variants: mergedVariants,
     });
+
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  };
 
-  const deleteHandler = useCallback(
-    async (id) => {
-      if (!window.confirm("Remove this product?")) return;
 
-      try {
-        await API.delete(`/admin/products/${id}`, {
-          headers: {
-            Authorization: `Bearer ${userInfo.token}`,
-          },
-        });
 
-        setProducts((prev) => prev.filter((p) => p._id !== id));
+  /* DELETE */
+  const deleteHandler = async (id) => {
+    if (!window.confirm("Remove this product?")) return;
 
-        toast.success("Product removed");
-      } catch {
-        toast.error("Delete failed");
-      }
-    },
-    [userInfo],
-  );
+    try {
+      await API.delete(`/admin/products/${id}`, {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      });
 
-  const resetForm = useCallback(() => {
+      setProducts((prev) => prev.filter((p) => p._id !== id));
+
+      toast.success("Product removed");
+    } catch {
+      toast.error("Delete failed");
+    }
+  };
+
+  /* RESET FORM */
+  const resetForm = () => {
     setEditingProduct(null);
+
     setForm({
       name: "",
-      price: "",
       category: "",
       countInStock: "",
       description: "",
       images: [],
+      variants: defaultVariants,
     });
-  }, []);
+  };
 
-  /* ===============================
-     RENDER
-  ================================ */
   return (
     <div className="max-w-[1600px] mx-auto">
       <header className="flex flex-col sm:flex-row justify-between mb-8 gap-6">
@@ -271,14 +293,30 @@ const ProductManager = () => {
                 className="w-full p-4 bg-slate-50 rounded-xl"
               />
 
-              <input
-                name="price"
-                type="number"
-                value={form.price}
-                onChange={handleChange}
-                placeholder="Price"
-                className="w-full p-4 bg-slate-50 rounded-xl"
-              />
+              {/* VARIANT PRICING */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-500">
+                  Variant Pricing
+                </label>
+
+                {form.variants.map((variant, index) => (
+                  <div key={index} className="flex gap-3">
+                    <span className="w-1/3 flex items-center font-semibold text-sm">
+                      {variant.weight}
+                    </span>
+
+                    <input
+                      type="number"
+                      placeholder="Price"
+                      value={variant.price}
+                      onChange={(e) =>
+                        handleVariantChange(index, "price", e.target.value)
+                      }
+                      className="w-2/3 p-3 bg-slate-50 rounded-xl"
+                    />
+                  </div>
+                ))}
+              </div>
 
               <input
                 name="category"

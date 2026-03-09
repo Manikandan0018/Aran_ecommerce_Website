@@ -1,13 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import API from "../../services/api";
 import { timeAgo } from "../../utils/timeAgo";
-import {
-  HiOutlineInbox,
-  HiOutlineMagnifyingGlass,
-  HiOutlineTruck,
-  HiOutlineCheckBadge,
-  HiOutlineXCircle,
-} from "react-icons/hi2";
+import { HiOutlineInbox, HiOutlineMagnifyingGlass } from "react-icons/hi2";
 
 const AdminOrders = () => {
   const userInfo = useMemo(
@@ -30,9 +24,10 @@ const AdminOrders = () => {
           Authorization: `Bearer ${userInfo.token}`,
         },
       });
+
       setOrders(data);
     } catch (error) {
-      console.error("Fetch Error:", error.response?.data || error.message);
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -43,7 +38,7 @@ const AdminOrders = () => {
   }, [fetchOrders]);
 
   /* =========================
-     MEMOIZED FILTERED ORDERS
+     FILTER ORDERS
   ========================= */
   const filteredOrders = useMemo(() => {
     if (!searchTerm) return orders;
@@ -66,7 +61,7 @@ const AdminOrders = () => {
   }, [orders, searchTerm]);
 
   /* =========================
-     UPDATE STATUS (Optimized)
+     UPDATE STATUS
   ========================= */
   const updateStatus = useCallback(
     async (id, status) => {
@@ -83,7 +78,6 @@ const AdminOrders = () => {
           },
         );
 
-        // Update locally instead of refetching everything
         setOrders((prev) =>
           prev.map((order) =>
             order._id === id ? { ...order, status } : order,
@@ -98,66 +92,54 @@ const AdminOrders = () => {
     [userInfo],
   );
 
+  const markDelivered = async (id) => {
+    try {
+      setProcessingId(id);
 
- const markDelivered = async (id) => {
-   try {
-     setProcessingId(id);
+      await API.put(
+        `/orders/${id}/delivered`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${userInfo.token}`,
+          },
+        },
+      );
 
-     await API.put(
-       `/orders/${id}/delivered`,
-       {},
-       {
-         headers: {
-           Authorization: `Bearer ${userInfo.token}`,
-         },
-       },
-     );
-
-     // Update UI instantly (no refetch needed)
-     setOrders((prev) =>
-       prev.map((order) =>
-         order._id === id ? { ...order, status: "delivered" } : order,
-       ),
-     );
-   } catch (error) {
-     console.error(error.response?.data || error.message);
-   } finally {
-     setProcessingId(null);
-   }
- };
+      setOrders((prev) =>
+        prev.map((order) =>
+          order._id === id ? { ...order, status: "delivered" } : order,
+        ),
+      );
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   /* =========================
-     LOADING STATE
+     LOADING
   ========================= */
   if (loading)
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <div className="w-10 h-10 border-2 border-[#3D4035]/10 border-t-[#3D4035] rounded-full animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#3D4035]">
-          Accessing Archives
-        </p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        Loading Orders...
       </div>
     );
 
   return (
     <div className="p-4 md:p-10 max-w-6xl mx-auto bg-[#FAF9F6] min-h-screen">
       {/* HEADER */}
-      <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#D4AF37]">
-            Admin Portal
-          </span>
-          <h1 className="text-4xl md:text-5xl font-bold text-[#3D4035] uppercase tracking-tighter mt-2">
-            Order Registry
-          </h1>
-        </div>
+      <header className="mb-10 flex flex-col md:flex-row justify-between gap-6">
+        <h1 className="text-3xl font-bold">Orders</h1>
 
         <div className="relative w-full md:w-96">
-          <HiOutlineMagnifyingGlass className="absolute left-5 top-1/2 -translate-y-1/2 text-[#3D4035] opacity-40" />
+          <HiOutlineMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by name, item or ID..."
-            className="w-full pl-14 pr-6 py-4 rounded-2xl border bg-white text-sm"
+            placeholder="Search orders..."
+            className="w-full pl-10 pr-4 py-3 border rounded-xl"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -166,67 +148,113 @@ const AdminOrders = () => {
 
       {/* EMPTY STATE */}
       {filteredOrders.length === 0 ? (
-        <div className="text-center py-32 bg-white rounded-[3rem] border border-dashed border-[#3D4035]/10">
-          <HiOutlineInbox className="mx-auto text-5xl text-[#3D4035]/10 mb-6" />
-          <p className="text-sm font-bold text-[#8C8C83] uppercase tracking-widest">
-            {searchTerm
-              ? "No records match your query"
-              : "Registry is currently empty"}
+        <div className="text-center py-20">
+          <HiOutlineInbox className="mx-auto text-5xl text-gray-300 mb-4" />
+          <p className="text-gray-500">
+            {searchTerm ? "No matching orders" : "No orders found"}
           </p>
         </div>
       ) : (
-        <div className="space-y-10">
+        <div className="space-y-8">
           {filteredOrders.map((order) => (
             <div
               key={order._id}
-              className="bg-white rounded-[2.5rem] shadow-sm border border-[#3D4035]/5 overflow-hidden"
+              className="bg-white rounded-3xl shadow-sm border p-8"
             >
-              {/* STATUS BAR */}
-              <div className="px-8 py-4 bg-[#FBFBFA] border-b flex justify-between items-center">
-                <span className="text-xs font-bold">
-                  ID: {order._id.slice(-8).toUpperCase()}
-                </span>
+              {/* TOP BAR */}
+              <div className="flex justify-between items-center mb-4">
+                <p className="text-sm font-bold">
+                  Order #{order._id.slice(-6).toUpperCase()}
+                </p>
 
-                <span className="text-xs">{order.status}</span>
+                <span
+                  className={`text-xs font-bold px-3 py-1 rounded-full ${
+                    order.status === "pending"
+                      ? "bg-yellow-100 text-yellow-600"
+                      : order.status === "confirmed"
+                        ? "bg-blue-100 text-blue-600"
+                        : order.status === "delivered"
+                          ? "bg-green-100 text-green-600"
+                          : "bg-red-100 text-red-600"
+                  }`}
+                >
+                  {order.status}
+                </span>
               </div>
 
-              <div className="p-8">
-                <p className="text-lg font-bold">{order.user?.name}</p>
+              {/* CUSTOMER */}
+              <p className="font-bold text-lg">{order.user?.name}</p>
+              <p className="text-sm text-gray-500 mb-4">
+                {timeAgo(order.createdAt)}
+              </p>
 
-                <p className="text-sm text-gray-500">
-                  ₹{order.totalAmount.toLocaleString()}
+              {/* ORDER ITEMS */}
+              <div className="space-y-3 border-t pt-4">
+                {order.orderItems.map((item, index) => (
+                  <div key={index} className="flex justify-between text-sm">
+                    <div>
+                      <p className="font-semibold">
+                        {item.name} ({item.weight})
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Qty: {item.quantity}
+                      </p>
+                    </div>
+
+                    <p className="font-bold">
+                      ₹{(item.price * item.quantity).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* TOTAL */}
+              <div className="border-t mt-4 pt-4 flex justify-between font-bold">
+                <span>Total</span>
+                <span>₹{order.totalAmount.toLocaleString()}</span>
+              </div>
+
+              {/* ADDRESS */}
+              <div className="mt-4 text-sm text-gray-600">
+                <p>📞 {order.phone}</p>
+                <p>
+                  📍 {order.shippingAddress?.address},{" "}
+                  {order.shippingAddress?.city} -
+                  {order.shippingAddress?.postalCode}
                 </p>
-                <div className="flex gap-4 mt-6">
-                  {order.status === "pending" && (
-                    <>
-                      <button
-                        disabled={processingId === order._id}
-                        onClick={() => updateStatus(order._id, "confirmed")}
-                        className="px-6 py-3 bg-black text-white rounded-xl disabled:opacity-50"
-                      >
-                        Confirm
-                      </button>
+              </div>
 
-                      <button
-                        disabled={processingId === order._id}
-                        onClick={() => updateStatus(order._id, "rejected")}
-                        className="px-6 py-3 border border-red-400 text-red-400 rounded-xl"
-                      >
-                        Reject
-                      </button>
-                    </>
-                  )}
-
-                  {order.status === "confirmed" && (
+              {/* ACTION BUTTONS */}
+              <div className="flex gap-4 mt-6">
+                {order.status === "pending" && (
+                  <>
                     <button
                       disabled={processingId === order._id}
-                      onClick={() => markDelivered(order._id)}
-                      className="px-6 py-3 bg-green-600 text-white rounded-xl disabled:opacity-50"
+                      onClick={() => updateStatus(order._id, "confirmed")}
+                      className="px-6 py-2 bg-black text-white rounded-xl"
                     >
-                      Mark Delivered
+                      Confirm
                     </button>
-                  )}
-                </div>
+
+                    <button
+                      disabled={processingId === order._id}
+                      onClick={() => updateStatus(order._id, "rejected")}
+                      className="px-6 py-2 border border-red-500 text-red-500 rounded-xl"
+                    >
+                      Reject
+                    </button>
+                  </>
+                )}
+
+                {order.status === "confirmed" && (
+                  <button
+                    disabled={processingId === order._id}
+                    onClick={() => markDelivered(order._id)}
+                    className="px-6 py-2 bg-green-600 text-white rounded-xl"
+                  >
+                    Mark Delivered
+                  </button>
+                )}
               </div>
             </div>
           ))}

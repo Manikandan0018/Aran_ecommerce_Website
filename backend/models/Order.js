@@ -15,9 +15,15 @@ const orderSchema = new mongoose.Schema(
           required: true,
           ref: "Product",
         },
+
         name: { type: String, required: true },
+
         image: { type: String, required: true },
+
+        weight: { type: String, required: true }, // ⭐ NEW FIELD
+
         price: { type: Number, required: true },
+
         quantity: { type: Number, required: true },
       },
     ],
@@ -32,6 +38,7 @@ const orderSchema = new mongoose.Schema(
     phone: { type: String, required: true },
 
     totalAmount: { type: Number, required: true },
+
     status: {
       type: String,
       enum: ["pending", "confirmed", "rejected", "delivered"],

@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext, useCallback, useMemo } from "react";
+import { useEffect, useState, useContext, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API from "../services/api";
 import ProductCard from "../components/ProductCard";
@@ -24,24 +24,12 @@ const Product = () => {
   const [product, setProduct] = useState(null);
   const [related, setRelated] = useState([]);
   const [qty, setQty] = useState(1);
+  const [selectedVariant, setSelectedVariant] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // WhatsApp Redirect Logic
-  const handleWhatsAppOrder = () => {
-    const phoneNumber = "91XXXXXXXXXX"; // Replace with your actual WhatsApp Number
-    const message = `Hello! I want to order:
-*Product:* ${product.name}
-*Price:* ₹${product.price}
-*Quantity:* ${qty}
-*Link:* ${window.location.href}`;
-
-    const encodedMessage = encodeURIComponent(message);
-    window.open(
-      `https://wa.me/${phoneNumber}?text=${encodedMessage}`,
-      "_blank",
-    );
-  };
-
+  /* =========================
+     FETCH RELATED
+  ========================= */
   const fetchRelatedProducts = useCallback(
     async (category) => {
       try {
@@ -55,11 +43,19 @@ const Product = () => {
     [id],
   );
 
+  /* =========================
+     FETCH PRODUCT
+  ========================= */
   const fetchProduct = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await API.get(`/products/${id}`);
       setProduct(data);
+
+      if (data.variants?.length > 0) {
+        setSelectedVariant(data.variants[0]);
+      }
+
       if (data.category) fetchRelatedProducts(data.category);
     } catch {
       toast.error("Product not found");
@@ -85,35 +81,78 @@ const Product = () => {
       <div className="p-20 text-center text-gray-500">Product Not Found</div>
     );
 
+  /* =========================
+     ADD TO CART
+  ========================= */
+  const handleAddToCart = () => {
+    addToCart(
+      {
+        ...product,
+        price: selectedVariant.price,
+        weight: selectedVariant.weight,
+      },
+      qty,
+    );
+
+    toast.success("Added to Cart");
+  };
+
+  /* =========================
+     WHATSAPP ORDER
+  ========================= */
+  const handleWhatsAppOrder = () => {
+    if (!selectedVariant) {
+      toast.error("Please select a variant");
+      return;
+    }
+
+    const phoneNumber = "917826920882"; // without + or spaces
+
+    const message =
+      `Hello! I want to order:\n\n` +
+      `Product: ${product.name}\n` +
+      `Weight: ${selectedVariant.weight}\n` +
+      `Price: ₹${selectedVariant.price}\n` +
+      `Quantity: ${qty}\n\n` +
+      `Link: ${window.location.href}`;
+
+    const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+
+    window.open(whatsappURL, "_blank");
+  };
+
   return (
     <div className="bg-[#f1f3f6] min-h-screen pb-10">
       <div className="max-w-[1440px] mx-auto sm:px-4 pt-4">
         <div className="flex flex-col lg:flex-row gap-4">
-          {/* LEFT: IMAGE & WHATSAPP ACTIONS */}
-          <div className="lg:w-[40%] bg-white p-4 h-fit lg:sticky lg:top-24 rounded-sm shadow-sm">
-            <div className="border border-gray-100 rounded-sm relative overflow-hidden bg-white">
+          {/* IMAGE + CART */}
+          <div className="lg:w-[40%] bg-white p-4 rounded-sm shadow-sm">
+            <div className="border border-gray-100 rounded-sm bg-white">
               <img
-                src={product.images?.[0] || product.image}
+                src={product.images?.[0]}
                 alt={product.name}
-                className="w-full h-[350px] md:h-[450px] object-contain p-4 transition-transform hover:scale-105 duration-300"
+                className="w-full h-[400px] object-contain p-4"
               />
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 mt-4">
+            <div className="flex gap-2 mt-4">
               <button
-                onClick={() => {
-                  addToCart(product, qty);
-                  toast.success("Added to Cart");
-                }}
-                className="flex-1 cursor-pointer bg-[#ff9f00] text-white h-10 sm:h-15 rounded-sm font-bold flex items-center justify-center gap-2 text-base shadow-sm hover:brightness-95 transition-all"
+                onClick={handleAddToCart}
+                className="flex-1 bg-[#ff9f00] text-white h-12 font-bold flex items-center justify-center gap-2"
               >
-                <HiShoppingCart className="text-xl" /> ADD TO CART
+                <HiShoppingCart /> ADD TO CART
               </button>
-            
+
+              <button
+                onClick={handleWhatsAppOrder}
+                className="flex-1 bg-[#25D366] text-white h-12 font-bold"
+              >
+                Order WhatsApp
+              </button>
             </div>
           </div>
 
-          {/* RIGHT: PRODUCT INFO */}
+          {/* PRODUCT DETAILS */}
           <div className="lg:w-[60%] space-y-4">
             <div className="bg-white p-6 rounded-sm shadow-sm">
               <nav className="flex items-center gap-1 text-[12px] text-gray-500 mb-2">
@@ -127,97 +166,72 @@ const Product = () => {
                 <span className="capitalize">{product.category}</span>
               </nav>
 
-              <h1 className="text-xl font-medium text-gray-900 leading-snug mb-2">
+              <h1 className="text-xl font-medium text-gray-900 mb-2">
                 {product.name}
               </h1>
 
-              {/* ORIGINAL RATING DISPLAY */}
+              {/* RATING */}
               <div className="flex items-center gap-3 mb-4">
-                <span className="bg-[#388e3c] text-white text-[12px] font-bold px-1.5 py-0.5 rounded-sm flex items-center gap-0.5">
-                  {product.rating > 0 ? product.rating : "No Rating"}{" "}
-                  <HiStar className="text-[10px]" />
+                <span className="bg-[#388e3c] text-white text-[12px] px-1.5 py-0.5 rounded-sm flex items-center gap-0.5">
+                  {product.rating || "New"} <HiStar />
                 </span>
-                <span className="text-sm font-bold text-gray-500">
-                  {product.numReviews || 0} Ratings & Reviews
+                <span className="text-sm text-gray-500">
+                  {product.numReviews || 0} Reviews
                 </span>
               </div>
 
-              {/* PRICE SECTION */}
-              <div className="flex items-baseline gap-3">
-                <span className="text-3xl font-bold text-gray-900">
-                  ₹{product.price?.toLocaleString()}
-                </span>
-                {product.oldPrice && (
-                  <>
-                    <span className="text-gray-500 line-through text-lg">
-                      ₹{product.oldPrice.toLocaleString()}
-                    </span>
-                    <span className="text-[#388e3c] font-bold text-lg">
-                      {Math.round(
-                        ((product.oldPrice - product.price) /
-                          product.oldPrice) *
-                          100,
-                      )}
-                      % off
-                    </span>
-                  </>
-                )}
+              {/* PRICE */}
+              <div className="text-3xl font-bold text-gray-900">
+                ₹{selectedVariant?.price}
               </div>
-              <p className="text-[12px] text-[#388e3c] font-bold mt-1">
-                Special Price
-              </p>
-            </div>
 
-            {/* TRUST BADGES - CUSTOMIZED FOR WHATSAPP/LOCAL STORE */}
-            <div className="bg-white p-6 rounded-sm shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3 p-3 border border-gray-50 rounded-md">
-                <HiArrowPath className="text-2xl text-[#2874f0]" />
-                <div className="leading-tight">
-                  <p className="text-sm font-bold">Easy Return</p>
-                  <p className="text-[11px] text-gray-500">
-                    7 Days Replacement
-                  </p>
+              {/* VARIANT SELECTOR */}
+              <div className="mt-5">
+                <p className="text-sm font-semibold mb-2">Select Weight</p>
+
+                <div className="flex gap-3 flex-wrap">
+                  {product.variants?.map((variant) => (
+                    <button
+                      key={variant.weight}
+                      onClick={() => setSelectedVariant(variant)}
+                      className={`px-4 py-2 border rounded-md text-sm ${
+                        selectedVariant?.weight === variant.weight
+                          ? "border-[#2874f0] bg-[#2874f0] text-white"
+                          : "border-gray-300"
+                      }`}
+                    >
+                      {variant.weight}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-3 border border-gray-50 rounded-md">
-                <HiShieldCheck className="text-2xl text-[#2874f0]" />
-                <div className="leading-tight">
-                  <p className="text-sm font-bold">GST Invoice</p>
-                  <p className="text-[11px] text-gray-500">
-                    100% Genuine Product
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 border border-gray-50 rounded-md">
-                <HiChatBubbleLeftRight className="text-2xl text-[#25D366]" />
-                <div className="leading-tight">
-                  <p className="text-sm font-bold">24/7 Support</p>
-                  <p className="text-[11px] text-gray-500">
-                    Order via WhatsApp
-                  </p>
-                </div>
+
+              {/* QTY */}
+              <div className="mt-5 flex items-center gap-3">
+                <span className="text-sm font-semibold">Quantity</span>
+
+                <input
+                  type="number"
+                  value={qty}
+                  min={1}
+                  onChange={(e) => setQty(Number(e.target.value))}
+                  className="w-16 border p-1 text-center"
+                />
               </div>
             </div>
 
             {/* DESCRIPTION */}
             <div className="bg-white p-6 rounded-sm shadow-sm">
-              <h3 className="text-lg font-bold mb-4 border-b pb-2 text-gray-800">
-                Product Details
-              </h3>
-              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+              <h3 className="text-lg font-bold mb-3">Product Details</h3>
+              <p className="text-sm text-gray-600 whitespace-pre-line">
                 {product.description}
               </p>
             </div>
 
-            {/* REVIEWS SECTION */}
-            <div className="bg-white p-6 rounded-sm shadow-sm" id="reviews">
-              <h3 className="text-lg font-bold mb-6 text-gray-800">
-                Ratings & Reviews
-              </h3>
+            {/* REVIEWS */}
+            <div className="bg-white p-6 rounded-sm shadow-sm">
               <Suspense
-                fallback={
-                  <div className="h-40 bg-gray-50 animate-pulse rounded-sm" />
-                }
+                fallback={<div className="h-40 bg-gray-50 animate-pulse" />}
               >
                 <ReviewSection productId={product._id} />
               </Suspense>
@@ -225,12 +239,11 @@ const Product = () => {
           </div>
         </div>
 
-        {/* RELATED SECTION */}
+        {/* RELATED PRODUCTS */}
         {related.length > 0 && (
           <div className="mt-6 bg-white p-6 rounded-sm shadow-sm">
-            <h2 className="text-xl font-bold mb-6 text-gray-800">
-              You might also like
-            </h2>
+            <h2 className="text-xl font-bold mb-6">You might also like</h2>
+
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {related.slice(0, 5).map((item) => (
                 <ProductCard key={item._id} product={item} />

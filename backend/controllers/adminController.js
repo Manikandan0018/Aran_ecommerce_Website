@@ -118,41 +118,73 @@ export const getDashboardStats = async (req, res) => {
   }
 };
 
-export const addProduct = async (req, res) => {
-  console.log("REQ BODY:", req.body);
 
+
+
+
+export const addProduct = async (req, res) => {
   try {
-    const { name, price, description, category, images, countInStock } =
+    const { name, description, category, images, variants, countInStock } =
       req.body;
 
-    if (!name || !price || !description || !category) {
-      return res.status(400).json({ message: "Missing required fields" });
+    /* REQUIRED FIELD CHECK */
+    if (!name || !description || !category) {
+      return res.status(400).json({
+        message: "Name, description and category are required",
+      });
     }
 
+    /* IMAGE VALIDATION */
     if (!images || !Array.isArray(images) || images.length === 0) {
-      return res.status(400).json({ message: "Product image required" });
+      return res.status(400).json({
+        message: "At least one product image is required",
+      });
     }
+
+    /* VARIANT VALIDATION */
+    if (!variants || !Array.isArray(variants) || variants.length === 0) {
+      return res.status(400).json({
+        message: "Product variants are required (50g,100g etc)",
+      });
+    }
+
+    /* CLEAN VARIANTS DATA */
+    const cleanedVariants = variants.map((v) => ({
+      weight: v.weight,
+      price: Number(v.price),
+    }));
 
     const product = await Product.create({
       name,
-      price: Number(price), // ⭐ IMPORTANT
       description,
       category,
-      images: Array.isArray(images) ? images : [], // ⭐ CRITICAL FIX
-      countInStock: Number(countInStock), // ⭐ IMPORTANT
+      images,
+      variants: cleanedVariants,
+      countInStock: Number(countInStock) || 0,
     });
 
     res.status(201).json(product);
   } catch (error) {
     console.error("ADD PRODUCT ERROR:", error);
-    res.status(500).json({ message: "Product creation failed" });
+
+    res.status(500).json({
+      message: "Product creation failed",
+    });
   }
 };
 
+
+
 export const updateProduct = async (req, res) => {
   try {
-    const { name, price, description, category, images, countInStock } =
-      req.body;
+    const {
+      name,
+      description,
+      category,
+      images,
+      variants,
+      countInStock,
+    } = req.body;
 
     const product = await Product.findById(req.params.id);
 
@@ -160,25 +192,34 @@ export const updateProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    product.name = name ?? product.name;
-    product.price = price ?? product.price;
-    product.description = description ?? product.description;
-    product.category = category ?? product.category;
+    /* BASIC FIELDS */
+    if (name !== undefined) product.name = name;
+    if (description !== undefined) product.description = description;
+    if (category !== undefined) product.category = category;
+    if (countInStock !== undefined) product.countInStock = countInStock;
 
-    // ⭐ IMAGE SAFETY (VERY IMPORTANT)
+    /* IMAGE UPDATE */
     if (images && Array.isArray(images)) {
       product.images = images;
     }
 
-    product.countInStock = countInStock ?? product.countInStock;
+    /* VARIANT UPDATE (IMPORTANT) */
+    if (variants && Array.isArray(variants)) {
+      product.variants = variants.map((v) => ({
+        weight: v.weight,
+        price: Number(v.price),
+      }));
+    }
 
     const updatedProduct = await product.save();
 
     res.json(updatedProduct);
   } catch (error) {
+    console.error("UPDATE PRODUCT ERROR:", error);
     res.status(500).json({ message: "Product update failed" });
   }
 };
+
 
 export const deleteProduct = async (req, res) => {
   try {
