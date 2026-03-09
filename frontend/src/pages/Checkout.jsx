@@ -48,6 +48,28 @@ const Checkout = () => {
     fetchAddresses();
   }, []);
 
+
+
+  const deleteAddress = async (id) => {
+    const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+
+    try {
+      const { data } = await API.delete(`/users/addresses/${id}`, {
+        headers: { Authorization: `Bearer ${userInfo.token}` },
+      });
+
+      setSavedAddresses(data);
+
+      if (selectedAddressId === id) {
+        setSelectedAddressId(null);
+      }
+
+      toast.success("Address deleted");
+    } catch {
+      toast.error("Delete failed");
+    }
+  };
+
   /* ===============================
      TOTAL PRICE
   ================================ */
@@ -118,9 +140,11 @@ const Checkout = () => {
 
       /* SAVE ADDRESS IF NEW */
       if (!selectedAddressId) {
-        await API.post("/users/addresses", address, {
+        const { data } = await API.post("/users/addresses", address, {
           headers: { Authorization: `Bearer ${userInfo.token}` },
         });
+
+        setSavedAddresses(data);
       }
 
       /* WHATSAPP MESSAGE */
@@ -207,6 +231,43 @@ const Checkout = () => {
               />
             </div>
           </div>
+
+          {savedAddresses.length > 0 && (
+            <div className="md:col-span-2 mb-4 space-y-3">
+              <p className="text-sm font-semibold">Saved Addresses</p>
+
+              {savedAddresses.map((addr) => (
+                <div
+                  key={addr._id}
+                  className={`border p-3 rounded cursor-pointer flex justify-between ${
+                    selectedAddressId === addr._id
+                      ? "border-blue-500 bg-blue-50"
+                      : ""
+                  }`}
+                >
+                  <div
+                    onClick={() => {
+                      setSelectedAddressId(addr._id);
+                      setAddress(addr);
+                    }}
+                  >
+                    <p className="text-sm font-medium">{addr.name}</p>
+                    <p className="text-xs text-gray-600">
+                      {addr.street}, {addr.city} - {addr.pincode}
+                    </p>
+                    <p className="text-xs">{addr.phone}</p>
+                  </div>
+
+                  <button
+                    onClick={() => deleteAddress(addr._id)}
+                    className="text-red-500 text-xs font-bold"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* ORDER SUMMARY */}
           <div className="bg-white shadow-sm rounded-sm">
