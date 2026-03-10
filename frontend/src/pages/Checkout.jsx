@@ -164,7 +164,7 @@ const Checkout = () => {
         `Items:\n${orderDetails}\n\n` +
         `Total Amount: ₹${totalPrice}`;
 
-      const phone = "917826920882"; // no + or spaces
+      const phone = "91 84897 173738489717373"; // no + or spaces
 
       const whatsappURL = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
