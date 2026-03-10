@@ -13,21 +13,33 @@ export const getProducts = async (req, res) => {
     ? { category: req.query.category }
     : {};
 
-  const sortOption = {};
-
-  if (req.query.sort === "price_asc") sortOption.price = 1;
-  if (req.query.sort === "price_desc") sortOption.price = -1;
-  if (req.query.sort === "newest") sortOption.createdAt = -1;
-  if (req.query.sort === "rating") sortOption.rating = -1;
-
   const filter = { ...keyword, ...categoryFilter };
+
+  let sortOption = null;
+
+  if (req.query.sort === "price_asc") sortOption = { minPrice: 1 };
+  if (req.query.sort === "price_desc") sortOption = { minPrice: -1 };
+  if (req.query.sort === "newest") sortOption = { createdAt: -1 };
 
   const count = await Product.countDocuments(filter);
 
-  const products = await Product.find(filter)
-    .limit(pageSize)
-    .skip(pageSize * (page - 1))
-    .sort(sortOption);
+  const pipeline = [
+    { $match: filter },
+
+    {
+      $addFields: {
+        minPrice: { $min: "$variants.price" },
+      },
+    },
+  ];
+
+  if (sortOption) {
+    pipeline.push({ $sort: sortOption });
+  }
+
+  pipeline.push({ $skip: pageSize * (page - 1) }, { $limit: pageSize });
+
+  const products = await Product.aggregate(pipeline);
 
   res.json({
     products,

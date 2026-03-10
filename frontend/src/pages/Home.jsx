@@ -1,12 +1,43 @@
 import { useEffect, useState, useCallback } from "react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay, Pagination, Navigation } from "swiper/modules";
+
+import "swiper/css";
+import "swiper/css/pagination";
+import "swiper/css/navigation";
+
+import { useNavigate } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
 import API from "../services/api";
 import ProductCard from "../components/ProductCard";
-import home from "../image/home.png";
+
+import banner1 from "../image/des1.png";
+import banner2 from "../image/des2.png";
+import banner3 from "../image/des3.png";
+
+import mobile1 from "../image/home1.png";
+import mobile2 from "../image/home2.png";
+import mobile3 from "../image/home3.png";
+
+// Desktop banners
+const desktopBanners = [
+  { image: banner1, productId: "699ec72ecc4a55f2c47c7547" },
+  { image: banner2, productId: "699ec4bfcc4a55f2c47c7528" },
+  { image: banner3, productId: "699ec620cc4a55f2c47c7538" },
+];
+
+// Mobile banners
+const mobileBanners = [
+  { image: mobile1, productId: "699ec72ecc4a55f2c47c7547" },
+  { image: mobile2, productId: "699ec4bfcc4a55f2c47c7528" },
+  { image: mobile3, productId: "699ec620cc4a55f2c47c7538" },
+];
 
 const Home = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [activeIndex, setActiveIndex] = useState(0);
 
+  const navigate = useNavigate();
   // Get all filters from URL
   const category = searchParams.get("category") || "";
   const sort = searchParams.get("sort") || "";
@@ -86,21 +117,84 @@ useEffect(() => {
       {/* 1. HERO BANNER - Reduced height for faster "Above the fold" loading */}
       {!searchTerm && (
         <section className="bg-white">
-          <div className="max-w-[1600px] mx-auto relative h-[400px] md:h-[350px] bg-[#2874f0] overflow-hidden">
-            <img
-              src={home}
-              alt="Banner"
-              className="w-full h-full object-cover opacity-90"
-              loading="eager"
-            />
-            <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-16 text-white bg-gradient-to-r from-black/50 to-transparent">
+          <div className="max-w-[1600px] mx-auto relative w-full h-full md:h-[350px] lg:h-160 bg-[#2874f0] overflow-hidden">
+            {/* Desktop Slider */}
+            <div className="hidden z-90 md:block h-full">
+              <Swiper
+                modules={[Autoplay, Pagination, Navigation]}
+                autoplay={{ delay: 3500, disableOnInteraction: false }}
+                pagination={{ clickable: true }}
+                navigation
+                loop
+                onSlideChange={(swiper) => setActiveIndex(swiper.realIndex)}
+                className="h-full w-full"
+              >
+                {desktopBanners.map((banner, index) => (
+                  <SwiperSlide
+                    key={index}
+                    onClick={() => navigate(`/product/${banner.productId}`)}
+                    className="cursor-pointer"
+                  >
+                    <img
+                      src={banner.image}
+                      alt={`Banner ${index}`}
+                      className="w-full h-full object-contain cursor-pointer"
+                      loading="eager"
+                      onClick={() => navigate(`/product/${banner.productId}`)}
+                    />
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+
+            {/* Mobile Slider */}
+            <div className="block z-91 md:hidden h-full">
+              <Swiper
+                modules={[Autoplay, Pagination]}
+                autoplay={{ delay: 3500, disableOnInteraction: false }}
+                pagination={{ clickable: true }}
+                loop
+                onSlideChange={(swiper) => setActiveIndex(swiper.realIndex)}
+                className="h-full w-full"
+              >
+                {mobileBanners.map((banner, index) => (
+                  <SwiperSlide
+                    key={index}
+                    onClick={() => navigate(`/product/${banner.productId}`)}
+                    className="cursor-pointer"
+                  >
+                    <img
+                      src={banner.image}
+                      alt={`Banner ${index}`}
+                      className="w-full h-full object-contain cursor-pointer"
+                      loading="eager"
+                      onClick={() => navigate(`/product/${banner.productId}`)}
+                    />
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+
+            <div className="absolute inset-0 z-90 flex flex-col justify-center px-6 md:px-16 text-white bg-gradient-to-r from-black/50 to-transparent">
+              {" "}
               <h1 className="text-2xl md:text-5xl font-black italic mb-2 tracking-tight">
                 NATURE'S BEST
               </h1>
               <p className="text-sm md:text-xl font-medium mb-4 text-yellow-400">
                 Pure. Organic. Delivered.
               </p>
-              <button className="w-fit px-6 py-2 bg-white text-[#2874f0] font-bold rounded-sm text-sm uppercase shadow-lg transition-transform active:scale-95">
+              <button
+                onClick={() =>
+                  navigate(
+                    `/product/${
+                      window.innerWidth >= 768
+                        ? desktopBanners[activeIndex].productId
+                        : mobileBanners[activeIndex].productId
+                    }`,
+                  )
+                }
+                className="w-fit px-6 py-2 bg-white text-[#2874f0] font-bold rounded-sm text-sm uppercase shadow-lg transition-transform active:scale-95"
+              >
                 Shop Now
               </button>
             </div>
@@ -140,7 +234,6 @@ useEffect(() => {
         </div>
       </div>
 
-
       {/* 3. PRODUCT LISTING */}
       <main className="max-w-[1400px] mx-auto px-2 md:px-4 py-4">
         {/* Search Header */}
@@ -176,7 +269,7 @@ useEffect(() => {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-2">
             {products.length > 0 ? (
               products.map((product) => (
                 <ProductCard key={product._id} product={product} />
