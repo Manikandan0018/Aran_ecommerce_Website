@@ -98,6 +98,7 @@ const ProductManager = () => {
   const [products, setProducts] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -111,7 +112,7 @@ const ProductManager = () => {
   /* FETCH PRODUCTS */
   const fetchProducts = useCallback(async () => {
     try {
-      const { data } = await API.get("/products");
+      const { data } = await API.get("/admin/products");
       setProducts(data.products || data);
     } catch {
       toast.error("Failed to load products");
@@ -172,6 +173,8 @@ const ProductManager = () => {
     formData.append("image", file);
 
     try {
+      setUploading(true);
+
       const { data } = await API.post("/upload", formData);
 
       setForm((prev) => ({
@@ -182,8 +185,11 @@ const ProductManager = () => {
       toast.success("Image uploaded");
     } catch {
       toast.error("Upload failed");
+    } finally {
+      setUploading(false);
     }
   };
+    
 
   /* EDIT PRODUCT */
   const editHandler = (product) => {
@@ -267,6 +273,7 @@ const ProductManager = () => {
     }
   };
 
+  console.log(products.length);
   /* RESET FORM */
   const resetForm = () => {
     setEditingProduct(null);
@@ -390,15 +397,22 @@ const ProductManager = () => {
             />
           )}
 
-          
-          <button className="w-full py-4 bg-black text-white rounded-xl">
-            {editingProduct ? "Update Product" : "Add Product"}
+          <button
+            disabled={uploading}
+            className="w-full py-4 bg-black text-white rounded-xl disabled:opacity-50"
+          >
+            {uploading
+              ? "Uploading Image..."
+              : editingProduct
+                ? "Update Product"
+                : "Add Product"}
           </button>
         </form>
       </div>
 
       {/* PRODUCT GRID */}
-      <div className="lg:col-span-8 grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="lg:col-span-8 grid sm:grid-cols-2 xl:grid-cols-3 gap-6 overflow-y-auto">
+        {" "}
         {loading ? (
           <p>Loading...</p>
         ) : (

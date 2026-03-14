@@ -1,10 +1,17 @@
 import mongoose from "mongoose";
 
 const variantSchema = new mongoose.Schema({
-  weight: {
-    type: String, // 50g, 100g, 500g, 1kg
+  value: {
+    type: Number,
     required: true,
   },
+
+  unit: {
+    type: String,
+    enum: ["mg", "g", "kg", "ml", "L"],
+    required: true,
+  },
+
   price: {
     type: Number,
     required: true,
@@ -13,15 +20,30 @@ const variantSchema = new mongoose.Schema({
 
 const productSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    name: {
+      type: String,
+      required: true,
+    },
 
-    description: { type: String, required: true },
+    description: {
+      type: String,
+      required: true,
+    },
 
-    category: { type: String, required: true },
+    category: {
+      type: String,
+      required: true,
+    },
 
-    images: [{ type: String }],
+    images: [String],
 
-    variants: [variantSchema], // ⭐ multiple weight prices
+    unitType: {
+      type: String,
+      enum: ["weight", "volume"],
+      required: true,
+    },
+
+    variants: [variantSchema],
 
     countInStock: {
       type: Number,

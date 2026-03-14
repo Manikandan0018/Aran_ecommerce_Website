@@ -20,7 +20,7 @@ const orderSchema = new mongoose.Schema(
 
         image: { type: String, required: true },
 
-        weight: { type: String, required: true }, // ⭐ NEW FIELD
+        weight: { type: String, required: true },
 
         price: { type: Number, required: true },
 
@@ -47,5 +47,18 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+/* =========================
+   INDEXES (VERY IMPORTANT)
+========================= */
+
+/* Faster dashboard queries */
+orderSchema.index({ createdAt: -1 });
+
+/* Faster revenue calculation */
+orderSchema.index({ status: 1 });
+
+/* Faster user order history */
+orderSchema.index({ user: 1 });
 
 export default mongoose.model("Order", orderSchema);

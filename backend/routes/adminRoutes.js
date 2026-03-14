@@ -21,6 +21,6 @@ router
   .put(protect, adminOnly, updateProduct)
   .delete(protect, adminOnly, deleteProduct);
 
-
 router.get("/stats", protect, adminOnly, getDashboardStats);
+
 export default router;

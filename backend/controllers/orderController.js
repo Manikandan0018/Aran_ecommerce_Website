@@ -126,11 +126,18 @@ export const deliverOrder = async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
+    if (order.status === "delivered") {
+      return res.status(400).json({ message: "Order already delivered" });
+    }
+
     order.status = "delivered";
 
     await order.save();
 
-    res.json({ message: "Order marked as delivered", order });
+    res.json({
+      message: "Order marked as delivered",
+      order,
+    });
   } catch (error) {
     console.error("DELIVER ORDER ERROR:", error);
     res.status(500).json({ message: "Failed to update order" });

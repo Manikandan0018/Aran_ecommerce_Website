@@ -14,6 +14,7 @@ import wishlistRoutes from "./routes/wishlistRoutes.js";
 import adminUserRoutes from "./routes/adminUserRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import { maintenanceMode } from "./middleware/maintenanceMiddleware.js";
+import { migrateProducts } from "./Migration/Migration.js";
 
 import addressRoutes from "./routes/addressRoutes.js";
 
@@ -27,6 +28,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "https://aran-angaadi.vercel.app",
 ];
+
 
 app.use(
   cors({
@@ -81,6 +83,8 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/admin/users", adminUserRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/users", addressRoutes);
+app.use("/api/admin", migrateProducts);
+
 
 
 /* =====================================

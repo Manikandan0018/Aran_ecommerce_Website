@@ -2,157 +2,152 @@ import User from "../models/User.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 
+/* =========================
+   UNIT TYPE DETECTOR
+========================= */
+const detectUnitType = (unit) => {
+  if (["mg", "g", "kg"].includes(unit)) return "weight";
 
+  if (["ml", "L"].includes(unit)) return "volume";
 
+  return "weight";
+};
 
-
+/* =========================
+   ADMIN DASHBOARD STATS
+========================= */
 export const getDashboardStats = async (req, res) => {
   try {
-    /* BASIC COUNTS */
-    const totalUsers = await User.countDocuments();
-    const totalOrders = await Order.countDocuments();
-    const totalProducts = await Product.countDocuments();
+    const [totalUsers, totalProducts, totalOrders] = await Promise.all([
+      User.countDocuments(),
+      Product.countDocuments(),
+      Order.countDocuments(),
+    ]);
 
-    /* TOTAL REVENUE */
     const revenueData = await Order.aggregate([
-      {
-        $match: { status: "confirmed" }, // Only real sales
-      },
+      { $match: { status: "delivered" } },
       {
         $group: {
           _id: null,
-          total: { $sum: "$totalAmount" },
+          totalRevenue: { $sum: "$totalAmount" },
         },
       },
     ]);
 
-    const totalRevenue = revenueData[0]?.total || 0;
+    const totalRevenue = revenueData[0]?.totalRevenue || 0;
 
-    /* TODAY ORDERS */
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
 
     const todayOrders = await Order.countDocuments({
-      createdAt: { $gte: today },
+      createdAt: { $gte: startOfDay, $lte: endOfDay },
     });
 
-    /* MONTHLY REVENUE (FOR GRAPH) */
-    const monthlyRevenue = await Order.aggregate([
-      {
-        $match: { status: "confirmed" },
-      },
+    const last7Days = await Order.aggregate([
+      { $match: { status: "delivered" } },
       {
         $group: {
-          _id: { $month: "$createdAt" },
+          _id: {
+            $dateToString: {
+              format: "%d %b",
+              date: "$createdAt",
+            },
+          },
           revenue: { $sum: "$totalAmount" },
         },
       },
-      {
-        $sort: { _id: 1 },
-      },
+      { $sort: { _id: 1 } },
     ]);
 
-    const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-
-    const graphData = monthlyRevenue.map((item) => ({
-      name: monthNames[item._id - 1],
-      revenue: item.revenue,
+    const graphData = last7Days.map((d) => ({
+      name: d._id,
+      revenue: d.revenue,
     }));
 
-    /* SALES BY CATEGORY */
-    const salesByCategory = await Order.aggregate([
-      { $match: { status: "confirmed" } },
+    const categorySales = await Order.aggregate([
+      { $match: { status: "delivered" } },
       { $unwind: "$orderItems" },
+
       {
         $lookup: {
           from: "products",
           localField: "orderItems.product",
           foreignField: "_id",
-          as: "productData",
+          as: "product",
         },
       },
-      { $unwind: "$productData" },
+
+      { $unwind: "$product" },
+
       {
         $group: {
-          _id: "$productData.category",
-          count: { $sum: "$orderItems.quantity" },
+          _id: "$product.category",
+          sales: { $sum: "$orderItems.quantity" },
         },
       },
     ]);
 
-    const totalSold = salesByCategory.reduce(
-      (acc, item) => acc + item.count,
-      0,
-    );
-
-    const categoryData = salesByCategory.map((item) => ({
-      name: item._id,
-      sales: totalSold ? Math.round((item.count / totalSold) * 100) : 0,
+    const categoryData = categorySales.map((c) => ({
+      name: c._id,
+      sales: c.sales,
     }));
 
     res.json({
       totalUsers,
-      totalOrders,
       totalProducts,
+      totalOrders,
       totalRevenue,
       todayOrders,
       graphData,
       categoryData,
     });
   } catch (error) {
-    console.error("Dashboard Stats Error:", error);
-    res.status(500).json({ message: "Failed to load dashboard stats" });
+    console.error("ADMIN STATS ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to load stats",
+    });
   }
 };
 
-
-
-
-
+/* =========================
+   ADD PRODUCT
+========================= */
 export const addProduct = async (req, res) => {
   try {
     const { name, description, category, images, variants, countInStock } =
       req.body;
 
-    /* REQUIRED FIELD CHECK */
     if (!name || !description || !category) {
       return res.status(400).json({
-        message: "Name, description and category are required",
+        message: "Name, description and category required",
       });
     }
 
-    /* IMAGE VALIDATION */
-    if (!images || !Array.isArray(images) || images.length === 0) {
+    if (!variants || !Array.isArray(variants)) {
       return res.status(400).json({
-        message: "At least one product image is required",
+        message: "Variants required",
       });
     }
 
-    /* VARIANT VALIDATION */
-    if (!variants || !Array.isArray(variants) || variants.length === 0) {
+    const cleanedVariants = variants
+      .filter((v) => v.value && v.unit && v.price)
+      .map((v) => ({
+        value: Number(v.value),
+        unit: v.unit,
+        price: Number(v.price),
+      }));
+
+    if (cleanedVariants.length === 0) {
       return res.status(400).json({
-        message: "Product variants are required (50g,100g etc)",
+        message: "At least one valid variant required",
       });
     }
 
-    /* CLEAN VARIANTS DATA */
-    const cleanedVariants = variants.map((v) => ({
-      weight: v.weight,
-      price: Number(v.price),
-    }));
+    const unitType = detectUnitType(cleanedVariants[0].unit);
 
     const product = await Product.create({
       name,
@@ -160,6 +155,7 @@ export const addProduct = async (req, res) => {
       category,
       images,
       variants: cleanedVariants,
+      unitType,
       countInStock: Number(countInStock) || 0,
     });
 
@@ -173,42 +169,69 @@ export const addProduct = async (req, res) => {
   }
 };
 
-
-
+/* =========================
+   UPDATE PRODUCT
+========================= */
 export const updateProduct = async (req, res) => {
   try {
-    const {
-      name,
-      description,
-      category,
-      images,
-      variants,
-      countInStock,
-    } = req.body;
-
     const product = await Product.findById(req.params.id);
 
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    /* BASIC FIELDS */
+    const { name, description, category, images, variants, countInStock } =
+      req.body;
+
     if (name !== undefined) product.name = name;
     if (description !== undefined) product.description = description;
     if (category !== undefined) product.category = category;
-    if (countInStock !== undefined) product.countInStock = countInStock;
+    if (images) product.images = images;
+    if (countInStock !== undefined) product.countInStock = Number(countInStock);
 
-    /* IMAGE UPDATE */
-    if (images && Array.isArray(images)) {
-      product.images = images;
+    /* CONVERT VARIANTS */
+    if (variants && Array.isArray(variants)) {
+      const cleanedVariants = variants
+        .filter((v) => v.value && v.unit && v.price)
+        .map((v) => ({
+          value: Number(v.value),
+          unit: v.unit,
+          price: Number(v.price),
+        }));
+
+      if (cleanedVariants.length > 0) {
+        product.variants = cleanedVariants;
+
+        const unit = cleanedVariants[0].unit;
+
+        if (["mg", "g", "kg"].includes(unit)) product.unitType = "weight";
+
+        if (["ml", "L"].includes(unit)) product.unitType = "volume";
+      }
     }
 
-    /* VARIANT UPDATE (IMPORTANT) */
-    if (variants && Array.isArray(variants)) {
-      product.variants = variants.map((v) => ({
-        weight: v.weight,
-        price: Number(v.price),
-      }));
+    /* MIGRATE OLD PRODUCTS */
+    if (!product.unitType && product.variants?.length > 0) {
+      const oldVariants = product.variants.map((v) => {
+        if (v.weight) {
+          const value = parseInt(v.weight);
+          const unit = v.weight.replace(/[0-9]/g, "");
+
+          return {
+            value,
+            unit,
+            price: v.price,
+          };
+        }
+
+        return v;
+      });
+
+      product.variants = oldVariants;
+
+      const unit = oldVariants[0].unit;
+
+      product.unitType = ["ml", "L"].includes(unit) ? "volume" : "weight";
     }
 
     const updatedProduct = await product.save();
@@ -216,45 +239,52 @@ export const updateProduct = async (req, res) => {
     res.json(updatedProduct);
   } catch (error) {
     console.error("UPDATE PRODUCT ERROR:", error);
-    res.status(500).json({ message: "Product update failed" });
+
+    res.status(500).json({
+      message: "Product update failed",
+    });
   }
 };
 
-
+/* =========================
+   DELETE PRODUCT
+========================= */
 export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
 
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({
+        message: "Product not found",
+      });
     }
 
     await product.deleteOne();
 
-    res.json({ message: "Product removed" });
+    res.json({
+      message: "Product removed",
+    });
   } catch (error) {
-    res.status(500).json({ message: "Delete failed" });
+    res.status(500).json({
+      message: "Delete failed",
+    });
   }
 };
 
+/* =========================
+   ADMIN PRODUCT LIST
+========================= */
+
 export const getAdminProducts = async (req, res) => {
   try {
-    const pageSize = 10;
-    const page = Number(req.query.page) || 1;
-
-    const count = await Product.countDocuments();
-
-    const products = await Product.find()
-      .limit(pageSize)
-      .skip(pageSize * (page - 1))
-      .sort({ createdAt: -1 });
+    const products = await Product.find().sort({ createdAt: -1 });
 
     res.json({
       products,
-      page,
-      pages: Math.ceil(count / pageSize),
     });
   } catch (error) {
-    res.status(500).json({ message: "Failed to load products" });
+    res.status(500).json({
+      message: "Failed to load products",
+    });
   }
 };

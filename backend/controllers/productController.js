@@ -2,9 +2,6 @@ import Product from "../models/Product.js";
 
 /* GET PRODUCTS */
 export const getProducts = async (req, res) => {
-  const pageSize = 12;
-  const page = Number(req.query.page) || 1;
-
   const keyword = req.query.keyword
     ? { name: { $regex: req.query.keyword, $options: "i" } }
     : {};
@@ -21,11 +18,8 @@ export const getProducts = async (req, res) => {
   if (req.query.sort === "price_desc") sortOption = { minPrice: -1 };
   if (req.query.sort === "newest") sortOption = { createdAt: -1 };
 
-  const count = await Product.countDocuments(filter);
-
   const pipeline = [
     { $match: filter },
-
     {
       $addFields: {
         minPrice: { $min: "$variants.price" },
@@ -37,14 +31,10 @@ export const getProducts = async (req, res) => {
     pipeline.push({ $sort: sortOption });
   }
 
-  pipeline.push({ $skip: pageSize * (page - 1) }, { $limit: pageSize });
-
   const products = await Product.aggregate(pipeline);
 
   res.json({
     products,
-    page,
-    pages: Math.ceil(count / pageSize),
   });
 };
 
