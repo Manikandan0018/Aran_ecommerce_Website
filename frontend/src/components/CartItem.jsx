@@ -15,11 +15,15 @@ const CartItem = React.memo(
             />
           </div>
 
-          {/* Qty Switcher */}
+          {/* Quantity Switcher */}
           <div className="flex items-center gap-0 border border-gray-300 rounded-sm overflow-hidden h-8">
             <button
               onClick={() =>
-                qtyChangeHandler(item._id, Math.max(1, item.qty - 1))
+                qtyChangeHandler(
+                  item._id,
+                  item.variantId,
+                  Math.max(1, item.qty - 1),
+                )
               }
               className="w-8 h-full bg-white border-r border-gray-300 hover:bg-gray-50 font-bold"
             >
@@ -34,7 +38,9 @@ const CartItem = React.memo(
             />
 
             <button
-              onClick={() => qtyChangeHandler(item._id, item.qty + 1)}
+              onClick={() =>
+                qtyChangeHandler(item._id, item.variantId, item.qty + 1)
+              }
               className="w-8 h-full bg-white border-l border-gray-300 hover:bg-gray-50 font-bold"
             >
               +
@@ -57,24 +63,35 @@ const CartItem = React.memo(
             </p>
           </div>
 
-          {/* ⭐ WEIGHT SELECTOR */}
+          {/* Variant Selector */}
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Weight:</span>
+            <span className="text-sm font-medium">
+              {item.unitType === "volume" ? "Volume:" : "Weight:"}
+            </span>
 
             <select
               value={item.weight}
               onChange={(e) => {
                 const selected = item.variants.find(
-                  (v) => v.weight === e.target.value,
+                  (v) => `${v.value}${v.unit}` === e.target.value,
                 );
 
-                weightChangeHandler(item._id, selected.weight, selected.price);
+                weightChangeHandler(
+                  item._id,
+                  selected._id,
+                  `${selected.value}${selected.unit}`,
+                  selected.price,
+                );
               }}
               className="border border-gray-300 text-sm p-1 rounded"
             >
               {item.variants?.map((variant) => (
-                <option key={variant.weight} value={variant.weight}>
-                  {variant.weight}
+                <option
+                  key={variant._id}
+                  value={`${variant.value}${variant.unit}`}
+                >
+                  {variant.value}
+                  {variant.unit}
                 </option>
               ))}
             </select>
@@ -93,10 +110,10 @@ const CartItem = React.memo(
             <span className="text-[#388e3c] text-xs font-bold">Big deal</span>
           </div>
 
-          {/* Actions */}
+          {/* Remove Button */}
           <div className="flex gap-4 mt-4">
             <button
-              onClick={() => removeItemHandler(item._id)}
+              onClick={() => removeItemHandler(item._id, item.variantId)}
               className="text-sm text-red-500 font-bold uppercase hover:text-red-800"
             >
               Remove
@@ -104,7 +121,7 @@ const CartItem = React.memo(
           </div>
         </div>
 
-        {/* Delivery */}
+        {/* Delivery Info */}
         <div className="w-full sm:w-48 text-sm">
           <p>
             Delivery by <span className="font-bold">5 days</span> |{" "}

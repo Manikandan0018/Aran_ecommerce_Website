@@ -5,14 +5,7 @@ import ProductCard from "../components/ProductCard";
 import { toast } from "react-toastify";
 import { lazy, Suspense } from "react";
 import { CartContext } from "../context/CartContext";
-import {
-  HiShoppingCart,
-  HiStar,
-  HiChevronRight,
-  HiShieldCheck,
-  HiArrowPath,
-  HiChatBubbleLeftRight,
-} from "react-icons/hi2";
+import { HiShoppingCart, HiStar, HiChevronRight } from "react-icons/hi2";
 
 const ReviewSection = lazy(() => import("../components/ReviewSection"));
 
@@ -28,8 +21,9 @@ const Product = () => {
   const [loading, setLoading] = useState(true);
 
   /* =========================
-     FETCH RELATED
+     FETCH RELATED PRODUCTS
   ========================= */
+
   const fetchRelatedProducts = useCallback(
     async (category) => {
       try {
@@ -46,17 +40,22 @@ const Product = () => {
   /* =========================
      FETCH PRODUCT
   ========================= */
+
   const fetchProduct = useCallback(async () => {
     try {
       setLoading(true);
+
       const { data } = await API.get(`/products/${id}`);
+
       setProduct(data);
 
       if (data.variants?.length > 0) {
         setSelectedVariant(data.variants[0]);
       }
 
-      if (data.category) fetchRelatedProducts(data.category);
+      if (data.category) {
+        fetchRelatedProducts(data.category);
+      }
     } catch {
       toast.error("Product not found");
     } finally {
@@ -84,12 +83,14 @@ const Product = () => {
   /* =========================
      ADD TO CART
   ========================= */
+
   const handleAddToCart = () => {
     addToCart(
       {
         ...product,
         price: selectedVariant.price,
-        weight: selectedVariant.weight,
+        weight: `${selectedVariant.value}${selectedVariant.unit}`,
+        variantId: selectedVariant._id,
       },
       qty,
     );
@@ -97,13 +98,12 @@ const Product = () => {
     toast.success("Added to Cart");
   };
 
-  
-
   return (
     <div className="bg-[#f1f3f6] min-h-screen pb-10">
       <div className="max-w-[1440px] mx-auto sm:px-4 pt-4">
         <div className="flex flex-col lg:flex-row gap-4">
-          {/* IMAGE + CART */}
+          {/* IMAGE SECTION */}
+
           <div className="lg:w-[40%] bg-white p-4 rounded-sm shadow-sm">
             <div className="border border-gray-100 rounded-sm bg-white">
               <img
@@ -118,16 +118,18 @@ const Product = () => {
                 onClick={handleAddToCart}
                 className="flex-1 bg-[#ff9f00] text-white h-12 font-bold flex items-center justify-center gap-2"
               >
-                <HiShoppingCart /> ADD TO CART
+                <HiShoppingCart />
+                ADD TO CART
               </button>
-
-              
             </div>
           </div>
 
           {/* PRODUCT DETAILS */}
+
           <div className="lg:w-[60%] space-y-4">
             <div className="bg-white p-6 rounded-sm shadow-sm">
+              {/* BREADCRUMB */}
+
               <nav className="flex items-center gap-1 text-[12px] text-gray-500 mb-2">
                 <span
                   className="hover:text-[#2874f0] cursor-pointer"
@@ -135,51 +137,63 @@ const Product = () => {
                 >
                   Home
                 </span>
+
                 <HiChevronRight />
+
                 <span className="capitalize">{product.category}</span>
               </nav>
+
+              {/* PRODUCT NAME */}
 
               <h1 className="text-xl font-medium text-gray-900 mb-2">
                 {product.name}
               </h1>
 
               {/* RATING */}
+
               <div className="flex items-center gap-3 mb-4">
                 <span className="bg-[#388e3c] text-white text-[12px] px-1.5 py-0.5 rounded-sm flex items-center gap-0.5">
                   {product.rating || "New"} <HiStar />
                 </span>
+
                 <span className="text-sm text-gray-500">
                   {product.numReviews || 0} Reviews
                 </span>
               </div>
 
               {/* PRICE */}
+
               <div className="text-3xl font-bold text-gray-900">
                 ₹{selectedVariant?.price}
               </div>
 
-              {/* VARIANT SELECTOR */}
+              {/* VARIANTS */}
+
               <div className="mt-5">
-                <p className="text-sm font-semibold mb-2">Select Weight</p>
+                <p className="text-sm font-semibold mb-2">
+                  Select {product.unitType === "volume" ? "Volume" : "Weight"}
+                </p>
 
                 <div className="flex gap-3 flex-wrap">
                   {product.variants?.map((variant) => (
                     <button
-                      key={variant.weight}
+                      key={variant._id}
                       onClick={() => setSelectedVariant(variant)}
                       className={`px-4 py-2 border rounded-md text-sm ${
-                        selectedVariant?.weight === variant.weight
+                        selectedVariant?._id === variant._id
                           ? "border-[#2874f0] bg-[#2874f0] text-white"
                           : "border-gray-300"
                       }`}
                     >
-                      {variant.weight}
+                      {variant.value}
+                      {variant.unit}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* QTY */}
+              {/* QUANTITY */}
+
               <div className="mt-5 flex items-center gap-3">
                 <span className="text-sm font-semibold">Quantity</span>
 
@@ -194,14 +208,17 @@ const Product = () => {
             </div>
 
             {/* DESCRIPTION */}
+
             <div className="bg-white p-6 rounded-sm shadow-sm">
               <h3 className="text-lg font-bold mb-3">Product Details</h3>
+
               <p className="text-sm text-gray-600 whitespace-pre-line">
                 {product.description}
               </p>
             </div>
 
             {/* REVIEWS */}
+
             <div className="bg-white p-6 rounded-sm shadow-sm">
               <Suspense
                 fallback={<div className="h-40 bg-gray-50 animate-pulse" />}
@@ -213,6 +230,7 @@ const Product = () => {
         </div>
 
         {/* RELATED PRODUCTS */}
+
         {related.length > 0 && (
           <div className="mt-6 bg-white p-6 rounded-sm shadow-sm">
             <h2 className="text-xl font-bold mb-6">You might also like</h2>

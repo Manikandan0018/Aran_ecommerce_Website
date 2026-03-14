@@ -21,18 +21,25 @@ const ProductCard = ({ product }) => {
   /* ================================
      DEFAULT VARIANT
   ================================= */
+
   const defaultVariant = useMemo(() => {
-    if (product?.variants?.length > 0) return product.variants[0];
+    if (product?.variants?.length > 0) {
+      return product.variants[0];
+    }
 
     return {
-      weight: "Default",
+      value: "",
+      unit: "",
       price: product.price || 0,
     };
   }, [product]);
 
+  const weightLabel = `${defaultVariant.value}${defaultVariant.unit}`;
+
   /* ================================
-     WISHLIST HANDLER
+     WISHLIST
   ================================= */
+
   const wishlistHandler = useCallback(
     async (e) => {
       e.preventDefault();
@@ -79,6 +86,7 @@ const ProductCard = ({ product }) => {
   /* ================================
      ADD TO CART
   ================================= */
+
   const addToCartHandler = useCallback(
     (e) => {
       e.preventDefault();
@@ -87,7 +95,8 @@ const ProductCard = ({ product }) => {
       addToCart(
         {
           ...product,
-          weight: defaultVariant.weight,
+          weight: weightLabel,
+          variantId: defaultVariant._id,
           price: defaultVariant.price,
         },
         1,
@@ -98,12 +107,13 @@ const ProductCard = ({ product }) => {
         position: "top-center",
       });
     },
-    [addToCart, product, defaultVariant],
+    [addToCart, product, defaultVariant, weightLabel],
   );
 
   /* ================================
      BUY NOW
   ================================= */
+
   const buyNowHandler = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -111,7 +121,8 @@ const ProductCard = ({ product }) => {
     addToCart(
       {
         ...product,
-        weight: defaultVariant.weight,
+        weight: weightLabel,
+        variantId: defaultVariant._id,
         price: defaultVariant.price,
       },
       1,
@@ -121,9 +132,11 @@ const ProductCard = ({ product }) => {
   };
 
   /* ================================
-     PRICE CALCULATION
+     PRICE
   ================================= */
+
   const discountPrice = defaultVariant.price;
+
   const originalPrice = product.mrp || Math.round(discountPrice * 1.25);
 
   const discountPercentage = Math.round(
@@ -133,6 +146,7 @@ const ProductCard = ({ product }) => {
   return (
     <div className="group bg-white border border-gray-100 hover:shadow-lg transition-all flex flex-col h-full relative">
       {/* WISHLIST */}
+
       <button
         onClick={wishlistHandler}
         disabled={loadingWishlist}
@@ -145,7 +159,8 @@ const ProductCard = ({ product }) => {
         )}
       </button>
 
-      {/* PRODUCT IMAGE */}
+      {/* IMAGE */}
+
       <Link to={`/product/${product._id}`} className="block p-2">
         <div className="aspect-square w-full bg-[#f9f9f9] overflow-hidden flex items-center justify-center">
           <img
@@ -165,10 +180,12 @@ const ProductCard = ({ product }) => {
         </Link>
 
         {/* RATING */}
+
         <div className="flex items-center gap-2 mb-1.5">
           {product.rating > 0 ? (
             <div className="bg-[#388e3c] text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
               {product.rating.toFixed(1)}
+
               <HiStar className="text-[10px]" />
             </div>
           ) : (
@@ -183,11 +200,11 @@ const ProductCard = ({ product }) => {
         </div>
 
         {/* PACK */}
-        <div className="text-xs text-gray-500 mb-1">
-          Pack: {defaultVariant.weight}
-        </div>
+
+        <div className="text-xs text-gray-500 mb-1">Pack: {weightLabel}</div>
 
         {/* PRICE */}
+
         <div className="flex items-center gap-2 mb-3">
           <span className="text-base font-bold text-gray-900">
             ₹{discountPrice?.toLocaleString()}
@@ -203,6 +220,7 @@ const ProductCard = ({ product }) => {
         </div>
 
         {/* BUTTONS */}
+
         <div className="mt-auto grid grid-cols-2 gap-1.5">
           <button
             onClick={addToCartHandler}

@@ -6,33 +6,54 @@ import CartItem from "../components/CartItem";
 
 const Cart = () => {
   const navigate = useNavigate();
+
   const { cartItems, removeFromCart, updateCart } = useContext(CartContext);
 
   const totalPrice = useMemo(() => {
     return cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
   }, [cartItems]);
 
+  /* =========================
+     CHANGE VARIANT
+  ========================= */
+const weightChangeHandler = useCallback(
+  (id, newVariantId, label, price) => {
+    const updated = cartItems.map((item) =>
+      item._id === id
+        ? {
+            ...item,
+            variantId: newVariantId,
+            weight: label,
+            price,
+          }
+        : item,
+    );
 
-  const weightChangeHandler = useCallback(
-    (id, weight, price) => {
-      const updated = cartItems.map((item) =>
-        item._id === id ? { ...item, weight: weight, price: price } : item,
-      );
+    updateCart(updated);
+  },
+  [cartItems, updateCart],
+);
 
-      updateCart(updated);
-    },
-    [cartItems, updateCart],
-  );
+  /* =========================
+     CHANGE QTY
+  ========================= */
 
   const qtyChangeHandler = useCallback(
-    (id, qty) => {
+    (id, variantId, qty) => {
       const updated = cartItems.map((item) =>
-        item._id === id ? { ...item, qty: Number(qty) } : item,
+        item._id === id && item.variantId === variantId
+          ? { ...item, qty: Number(qty) }
+          : item,
       );
+
       updateCart(updated);
     },
     [cartItems, updateCart],
   );
+
+  /* =========================
+     EMPTY CART
+  ========================= */
 
   if (cartItems.length === 0) {
     return (
@@ -43,8 +64,11 @@ const Cart = () => {
             alt="empty"
             className="w-48 mx-auto mb-4"
           />
+
           <h2 className="text-xl font-medium mb-2">Your cart is empty!</h2>
+
           <p className="text-sm text-gray-500 mb-6">Add items to it now.</p>
+
           <button
             onClick={() => navigate("/")}
             className="bg-[#2874f0] text-white px-12 py-3 rounded-sm font-medium shadow-md"
@@ -60,7 +84,8 @@ const Cart = () => {
     <div className="bg-[#f1f3f6] min-h-screen pb-20">
       <div className="max-w-[1200px] mx-auto sm:px-4 py-4">
         <div className="flex flex-col lg:flex-row gap-4">
-          {/* LEFT: ITEM LIST */}
+          {/* LEFT SIDE */}
+
           <div className="lg:w-[68%]">
             <div className="bg-white shadow-sm rounded-sm mb-4">
               <div className="p-4 border-b flex justify-between items-center">
@@ -72,7 +97,7 @@ const Cart = () => {
               <div className="divide-y divide-gray-100">
                 {cartItems.map((item) => (
                   <CartItem
-                    key={item._id + item.weight}
+                    key={item._id + item.variantId}
                     item={item}
                     removeItemHandler={removeFromCart}
                     qtyChangeHandler={qtyChangeHandler}
@@ -81,7 +106,8 @@ const Cart = () => {
                 ))}
               </div>
 
-              {/* STICKY PLACE ORDER BUTTON (Desktop) */}
+              {/* PLACE ORDER BUTTON */}
+
               <div className="p-4 bg-white border-t flex justify-end sticky bottom-0 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
                 <button
                   onClick={() => navigate("/checkout")}
@@ -93,28 +119,33 @@ const Cart = () => {
             </div>
           </div>
 
-          {/* RIGHT: PRICE DETAILS */}
+          {/* RIGHT SIDE */}
+
           <div className="lg:w-[32%] h-fit sticky top-20">
             <div className="bg-white shadow-sm rounded-sm overflow-hidden">
               <h3 className="text-gray-500 font-bold uppercase text-sm p-4 border-b">
                 Price Details
               </h3>
+
               <div className="p-4 space-y-4">
                 <div className="flex justify-between text-base">
                   <span>Price ({cartItems.length} items)</span>
                   <span>₹{totalPrice.toLocaleString()}</span>
                 </div>
+
                 <div className="flex justify-between text-base">
                   <span>Delivery Charges</span>
                   <span className="text-[#388e3c]">FREE</span>
                 </div>
+
                 <div className="border-t border-dashed pt-4 flex justify-between text-xl font-bold">
                   <span>Total Amount</span>
                   <span>₹{totalPrice.toLocaleString()}</span>
                 </div>
               </div>
+
               <div className="p-4 border-t bg-gray-50">
-                <p className="text-[#388e3c] font-bold text-sm flex items-center gap-1">
+                <p className="text-[#388e3c] font-bold text-sm">
                   You will save ₹0 on this order
                 </p>
               </div>
@@ -122,6 +153,7 @@ const Cart = () => {
 
             <div className="mt-4 flex items-center gap-3 text-gray-500 text-sm font-bold p-2">
               <HiShieldCheck className="text-2xl" />
+
               <span>100% verified Natural Products</span>
             </div>
           </div>
