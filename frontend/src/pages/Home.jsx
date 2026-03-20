@@ -50,11 +50,19 @@ const Home = () => {
   // Fetch Logic
 // Inside Home.js - Update your fetchData inside useEffect
 useEffect(() => {
+  const cachedProducts = localStorage.getItem("homeProducts");
+  const cachedCategories = localStorage.getItem("homeCategories");
+
+  if (cachedProducts && cachedCategories) {
+    setProducts(JSON.parse(cachedProducts));
+    setCategories(JSON.parse(cachedCategories));
+    setLoading(false);
+  }
+
   const fetchData = async () => {
     try {
       setLoading(true);
-      
-      // Construct query
+
       let query = `/products?category=${encodeURIComponent(category)}&sort=${sort}`;
       if (searchTerm) query += `&keyword=${encodeURIComponent(searchTerm)}`;
 
@@ -63,36 +71,39 @@ useEffect(() => {
         API.get(query),
       ]);
 
-     const normalizedMap = new Map();
+      const normalizedMap = new Map();
 
-     catRes.data.forEach((cat) => {
-       if (!cat) return;
+      catRes.data.forEach((cat) => {
+        if (!cat) return;
+        const cleaned = cat.trim().toLowerCase();
 
-       const cleaned = cat.trim().toLowerCase(); // normalize for comparison
+        if (!normalizedMap.has(cleaned)) {
+          normalizedMap.set(
+            cleaned,
+            cat
+              .trim()
+              .toLowerCase()
+              .replace(/\b\w/g, (l) => l.toUpperCase()),
+          );
+        }
+      });
 
-       // Store only first properly formatted version
-       if (!normalizedMap.has(cleaned)) {
-         normalizedMap.set(
-           cleaned,
-           cat
-             .trim()
-             .toLowerCase()
-             .replace(/\b\w/g, (l) => l.toUpperCase()), // Title Case
-         );
-       }
-     });
+      const finalCategories = [...normalizedMap.values()];
+      const finalProducts = prodRes.data.products || prodRes.data;
 
-     setCategories([...normalizedMap.values()]);
-      
-      setProducts(prodRes.data.products || prodRes.data);
+      setCategories(finalCategories);
+      setProducts(finalProducts);
+
+      // 🔥 CACHE SAVE
+      localStorage.setItem("homeProducts", JSON.stringify(finalProducts));
+      localStorage.setItem("homeCategories", JSON.stringify(finalCategories));
     } catch (error) {
       console.error("Data fetch error", error);
-      // Fallback unique categories
-      setCategories(["Pure Ghee", "Wild Honey", "Cold Pressed", "Spices"]);
     } finally {
       setLoading(false);
     }
   };
+
   fetchData();
 }, [category, sort, searchTerm]);
   
