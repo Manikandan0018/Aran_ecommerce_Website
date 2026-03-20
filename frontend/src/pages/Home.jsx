@@ -22,14 +22,14 @@ import mobile3 from "../image/home3.png";
 // Desktop banners
 const desktopBanners = [
   { image: banner1, productId: "699ec72ecc4a55f2c47c7547" },
-  { image: banner2, productId: "699ec4bfcc4a55f2c47c7528" },
+  { image: banner2, productId: "69bd6b412aa405602a4bf73f" },
   { image: banner3, productId: "699ec620cc4a55f2c47c7538" },
 ];
 
 // Mobile banners
 const mobileBanners = [
   { image: mobile1, productId: "699ec72ecc4a55f2c47c7547" },
-  { image: mobile2, productId: "699ec4bfcc4a55f2c47c7528" },
+  { image: mobile2, productId: "69bd6b412aa405602a4bf73f" },
   { image: mobile3, productId: "699ec620cc4a55f2c47c7538" },
 ];
 
@@ -140,7 +140,15 @@ useEffect(() => {
                       alt={`Banner ${index}`}
                       className="w-full h-full object-contain cursor-pointer"
                       loading="eager"
-                      onClick={() => navigate(`/product/${banner.productId}`)}
+                      onClick={() =>
+                        navigate(
+                          `/product/${
+                            window.innerWidth >= 768
+                              ? desktopBanners[activeIndex].productId
+                              : mobileBanners[activeIndex].productId
+                          }`,
+                        )
+                      }
                     />
                   </SwiperSlide>
                 ))}
@@ -168,14 +176,22 @@ useEffect(() => {
                       alt={`Banner ${index}`}
                       className="w-full h-full object-contain cursor-pointer"
                       loading="eager"
-                      onClick={() => navigate(`/product/${banner.productId}`)}
+                      onClick={() =>
+                        navigate(
+                          `/product/${
+                            window.innerWidth >= 768
+                              ? desktopBanners[activeIndex].productId
+                              : mobileBanners[activeIndex].productId
+                          }`,
+                        )
+                      }
                     />
                   </SwiperSlide>
                 ))}
               </Swiper>
             </div>
 
-            <div className="absolute inset-0 z-90 flex flex-col justify-center px-6 md:px-16 text-white bg-gradient-to-r from-black/50 to-transparent">
+            <div className="absolute inset-0 mt-70 w-fit h-fit  z-90 flex flex-col justify-center px-6 md:px-16 text-white bg-gradient-to-r from-black/50 to-transparent">
               {" "}
               <h1 className="text-2xl md:text-5xl font-black italic mb-2 tracking-tight">
                 NATURE'S BEST

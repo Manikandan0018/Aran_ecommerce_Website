@@ -3,15 +3,50 @@ import { useNavigate } from "react-router-dom";
 import { HiShieldCheck } from "react-icons/hi2";
 import { CartContext } from "../context/CartContext";
 import CartItem from "../components/CartItem";
+import { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import API from "../services/api";
 
 const Cart = () => {
   const navigate = useNavigate();
-
+  const [searchParams] = useSearchParams();
   const { cartItems, removeFromCart, updateCart } = useContext(CartContext);
 
   const totalPrice = useMemo(() => {
     return cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
   }, [cartItems]);
+
+  useEffect(() => {
+    const productId = searchParams.get("add");
+
+    if (productId) {
+      const fetchAndAdd = async () => {
+        try {
+          const { data } = await API.get(`/products/${productId}`);
+
+          const product = data.product || data;
+
+          updateCart([
+            ...cartItems,
+            {
+              ...product,
+              qty: 1,
+              variantId: product.variants?.[0]?._id || "default",
+              weight: product.variants?.[0]?.weight || "Default",
+              price: product.variants?.[0]?.price || product.price,
+            },
+          ]);
+
+          // 🔥 remove query so refresh won't duplicate
+          window.history.replaceState({}, "", "/cart");
+        } catch (err) {
+          console.error("Add from banner failed", err);
+        }
+      };
+
+      fetchAndAdd();
+    }
+  }, [searchParams]);
 
   /* =========================
      CHANGE VARIANT
