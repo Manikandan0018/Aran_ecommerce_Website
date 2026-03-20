@@ -7,87 +7,80 @@ import {
   HiOutlinePlus,
 } from "react-icons/hi2";
 
-/* ALL UNITS */
 const units = ["mg", "g", "kg", "ml", "L"];
 
 /* ===============================
-   PRODUCT CARD
+   PRODUCT CARD (OPTIMIZED)
 ================================ */
-const ProductCard = memo(({ product, onEdit, onDelete }) => {
-  return (
-    <div className="bg-white rounded-2xl border shadow-sm hover:shadow-lg transition p-5 flex flex-col">
-      {/* IMAGE */}
-      <div className="aspect-square bg-slate-50 rounded-xl overflow-hidden mb-4">
-        <img
-          src={product.images?.[0] || "https://via.placeholder.com/400"}
-          alt={product.name}
-          className="w-full h-full object-cover"
-        />
-      </div>
+const ProductCard = memo(
+  ({ product, onEdit, onDelete }) => {
+    return (
+      <div className="bg-white rounded-2xl border shadow-sm hover:shadow-lg transition p-5 flex flex-col">
+        <div className="aspect-square bg-slate-50 rounded-xl overflow-hidden mb-4">
+          <img
+            src={product.images?.[0] || "https://via.placeholder.com/400"}
+            alt={product.name}
+            loading="lazy"
+            className="w-full h-full object-cover"
+          />
+        </div>
 
-      {/* NAME */}
-      <h3 className="text-lg font-semibold text-slate-800">{product.name}</h3>
+        <h3 className="text-lg font-semibold">{product.name}</h3>
 
-      {/* CATEGORY */}
-      <p className="text-xs text-gray-400 uppercase tracking-wider">
-        {product.category}
-      </p>
+        <p className="text-xs text-gray-400 uppercase">{product.category}</p>
 
-      {/* DESCRIPTION */}
-      <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-        {product.description}
-      </p>
+        <p className="text-sm text-gray-600 line-clamp-2">
+          {product.description}
+        </p>
 
-      {/* STOCK */}
-      <div className="mt-2 text-sm">
-        {product.countInStock > 0 ? (
-          <span className="text-emerald-600 font-semibold">
-            In Stock: {product.countInStock}
-          </span>
-        ) : (
-          <span className="text-red-500 font-semibold">Out of Stock</span>
-        )}
-      </div>
-
-      {/* VARIANTS */}
-      <div className="mt-3 space-y-1">
-        {product.variants?.map((v, i) => (
-          <div
-            key={i}
-            className="flex justify-between text-sm bg-slate-50 px-3 py-1 rounded-lg"
-          >
-            <span>
-              {v.value}
-              {v.unit}
+        <div className="mt-2 text-sm">
+          {product.countInStock > 0 ? (
+            <span className="text-green-600">
+              In Stock: {product.countInStock}
             </span>
-            <span className="font-semibold">₹{v.price}</span>
-          </div>
-        ))}
-      </div>
+          ) : (
+            <span className="text-red-500">Out of Stock</span>
+          )}
+        </div>
 
-      {/* ACTION BUTTONS */}
-      <div className="flex gap-2 mt-4">
-        <button
-          onClick={() => onEdit(product)}
-          className="flex-1 flex items-center justify-center gap-2 py-2 bg-slate-100 rounded-lg hover:bg-emerald-500 hover:text-white transition"
-        >
-          <HiOutlinePencilSquare />
-          Edit
-        </button>
+        <div className="mt-3 space-y-1">
+          {product.variants?.map((v, i) => (
+            <div
+              key={i}
+              className="flex justify-between text-sm bg-slate-50 px-3 py-1 rounded-lg"
+            >
+              <span>
+                {v.value}
+                {v.unit}
+              </span>
+              <span>₹{v.price}</span>
+            </div>
+          ))}
+        </div>
 
-        <button
-          onClick={() => onDelete(product._id)}
-          className="px-4 py-2 bg-red-100 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition"
-        >
-          <HiOutlineTrash />
-        </button>
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={() => onEdit(product)}
+            className="flex-1 py-2 bg-slate-100 rounded-lg hover:bg-green-500 hover:text-white"
+          >
+            Edit
+          </button>
+
+          <button
+            onClick={() => onDelete(product._id)}
+            className="px-4 py-2 bg-red-100 text-red-500 rounded-lg hover:bg-red-500 hover:text-white"
+          >
+            Delete
+          </button>
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+  (prev, next) => prev.product._id === next.product._id,
+);
 
 /* ===============================
-   PRODUCT MANAGER
+   MAIN COMPONENT
 ================================ */
 const ProductManager = () => {
   const userInfo = useMemo(
@@ -96,8 +89,11 @@ const ProductManager = () => {
   );
 
   const [products, setProducts] = useState([]);
-  const [editingProduct, setEditingProduct] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
+
+  const [editingProduct, setEditingProduct] = useState(null);
   const [uploading, setUploading] = useState(false);
 
   const [form, setForm] = useState({
@@ -109,17 +105,28 @@ const ProductManager = () => {
     variants: [{ value: "", unit: "g", price: "" }],
   });
 
-  /* FETCH PRODUCTS */
-  const fetchProducts = useCallback(async () => {
+  /* ===============================
+     FETCH PRODUCTS (PAGINATED)
+  ================================= */
+  const fetchProducts = useCallback(async (pageNum = 1) => {
     try {
-      const { data } = await API.get("/admin/products");
-      setProducts(data.products || data);
+      const { data } = await API.get(`/admin/products?page=${pageNum}&limit=8`);
+
+      if (pageNum === 1) {
+        setProducts(data.products);
+      } else {
+        setProducts((prev) => [...prev, ...data.products]);
+      }
+
+      setHasMore(data.products.length > 0);
     } catch {
       toast.error("Failed to load products");
     } finally {
       setLoading(false);
     }
   }, []);
+
+  
 
   useEffect(() => {
     fetchProducts();
@@ -189,7 +196,6 @@ const ProductManager = () => {
       setUploading(false);
     }
   };
-    
 
   /* EDIT PRODUCT */
   const editHandler = (product) => {
